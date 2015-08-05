@@ -527,7 +527,8 @@ function email_wrappers_mail_alter(&$message) {
       $sid = $params['submission']->sid;
       if ($resend) {
         if (module_exists('fundraiser_webform')) {
-          $donation = _fundraiser_webform_get_donation_by_sid($sid);
+          // Reload donation to make sure we have the latest information for tokens, etc
+          $donation = _fundraiser_webform_get_donation_by_sid($sid, TRUE);
           $params['donation'] = $donation;  //needed for subject line in email_wrappers_mail
           $params['message']['params']['donation'] = $donation;  //needed for body in email_wrappers_render_email_body
         }

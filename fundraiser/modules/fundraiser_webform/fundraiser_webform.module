@@ -1216,11 +1216,11 @@ function _fundraiser_webform_get_nonfieldset_keys($field_info = NULL, $fields = 
 /**
  * Helper function, get a donation object given a sid.
  */
-function _fundraiser_webform_get_donation_by_sid($sid) {
+function _fundraiser_webform_get_donation_by_sid($sid, $refresh = FALSE) {
   $did = db_query('SELECT did FROM {fundraiser_donation} WHERE sid = :sid',
     array(':sid' => $sid))->fetchCol();
   if (isset($did[0])) {
-    $donation = fundraiser_donation_get_donation($did[0]);
+    $donation = fundraiser_donation_get_donation($did[0], $refresh);
     if ($donation) {
       return $donation;
     }
