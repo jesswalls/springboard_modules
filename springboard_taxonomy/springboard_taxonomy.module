@@ -2,21 +2,92 @@
 
 /**
  * Implements hook_menu().
+ *
+ * We use custom paths to access pages normally provided
+ * by the taxonomy and user modules in order to:
+ * provide a stripped-down taxonomy admin interface and finer-grained
+ * permissions; and to provide a stripped-down permissions interface that
+ * only shows taxonomy permissions.
  */
 function springboard_taxonomy_menu() {
   $items = array();
-  $items['admin/config/content/springboard-taxonomy'] = array(
-    'title' => 'Springboard Taxonomy',
+
+  // Our custom path/version of the taxonomy overview page
+  $items['admin/springboard/taxonomy/%springboard_taxonomy_vocab_name'] = array(
+    'title callback' => 'entity_label',
+    'title arguments' => array('taxonomy_vocabulary', 3),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('taxonomy_overview_terms', 3),
+    'access arguments' => array('administer organization issues'),
+    'file path' => drupal_get_path('module', 'taxonomy'),
+    'file' => 'taxonomy.admin.inc',
+  );
+  $items['admin/springboard/taxonomy/%springboard_taxonomy_vocab_name/list'] = array(
+    'title' => 'List',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -20,
+  );
+
+  // Our custom path for the add terms page
+  $items['admin/springboard/taxonomy/%springboard_taxonomy_vocab_name/add'] = array(
+    'title' => 'Add term',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('taxonomy_form_term', array(), 3),
+    'access arguments' => array('administer organization issues'),
+    'file path' => drupal_get_path('module', 'taxonomy'),
+    'file' => 'taxonomy.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  // Settings page. Assign vocabulary to content types.
+  $items['admin/springboard/taxonomy/%springboard_taxonomy_vocab_name/settings'] = array(
+    'title' => 'Settings',
     'description' => 'Configuration settings for Springboard Taxonomy.',
     'page callback' => 'springboard_taxonomy_settings_page',
-    'access arguments' => array('administer taxonomy'),
-    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => array('administer springboard taxonomy settings'),
+    'type' => MENU_LOCAL_TASK,
     'file' => 'springboard_taxonomy.admin.inc',
+  );
+
+  // Custom path for user permissions
+  $items['admin/springboard/taxonomy/%springboard_taxonomy_vocab_name/permissions'] = array(
+    'title' => 'Taxonomy Permissions',
+    'description' => 'Permissions for springboard taxonomy.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('user_admin_permissions'),
+    'access arguments' => array('administer permissions'),
+    'file path' => drupal_get_path('module', 'user'),
+    'file' => 'user.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
   );
 
   return $items;
 }
 
+/**
+ * Load the vocab object from the wildcard argument
+ * @param $name
+ * @return mixed
+ */
+function springboard_taxonomy_vocab_name_load($name) {
+  $vocabularies = taxonomy_vocabulary_load_multiple(NULL, array('machine_name' => 'sba_organization_issues'));
+  return reset($vocabularies);
+}
+
+/**
+ * Implements hook_permission().
+ */
+function springboard_taxonomy_permission() {
+  return array(
+    'administer organization issues' => array(
+      'title' => t('View term listing and add new organization issues'),
+    ),
+    'administer springboard taxonomy settings' => array(
+      'title' => t('Assign or remove the organization issues taxonomy to/from content types.'),
+    ),
+  );
+}
 
 /**
  * Implements hook_form_alter().
@@ -31,6 +102,41 @@ function springboard_taxonomy_form_alter(&$form, &$form_state, $form_id) {
     if (in_array($form['#node']->type, $taxonomy_types) && isset($form['field_sba_organization_issues'])) {
       springboard_taxonomy_taxonomy_form($form, $form_state, $form_id);
     }
+  }
+
+  if($form_id == 'taxonomy_overview_terms' && arg(1) == 'springboard' && arg(3) == 'sba_organization_issues') {
+    if (isset($form['actions']['reset_alphabetical'])) {
+      $form['actions']['reset_alphabetical']['#access'] = FALSE;
+    }
+  }
+
+  if($form_id == 'taxonomy_form_term' && (arg(1) == 'springboard' && arg(3) == 'sba_organization_issues') || (arg(0) =='taxonomy' && arg(1) == 'term' && arg(3) == 'edit')) {
+    $description = $form['description'];
+    unset($form['description']);
+    $form['description_wrapper'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Description'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['description_wrapper']['description'] = $description;
+    if (isset($form['path'])) {
+      $path = $form['path'];
+      unset($form['path']);
+      $form['path_wrapper'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Url Alias'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+      $form['path_wrapper']['path'] = $path;
+    }
+  }
+
+  // Add javascript to hide non-taxonomy permissions on the permissions form.
+  if ($form_id == 'user_admin_permissions' && arg(1) == 'springboard' && arg(2) == 'taxonomy') {
+    $form['#attached']['js'][] = drupal_get_path('module', 'springboard_taxonomy')
+      . '/js/springboard_taxonomy_permissions.js';
   }
 }
 
@@ -47,13 +153,15 @@ function springboard_taxonomy_taxonomy_form(&$form, &$form_state, $form_id) {
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
     '#group' => 'additional_settings',
-    '#weight' => -10,
   );
+  if ($form['#node']->type == 'sba_message_action') {
+    $form['springboard_taxonomy_options']['#weight'] = -10;
+  }
   // Include JS to layout long lists of checkboxes in columns.
-  drupal_add_js(drupal_get_path('module', 'springboard_taxonomy') . '/js/jquery.columnizer.min.js');
-  drupal_add_js(drupal_get_path('module', 'springboard_taxonomy') . '/js/springboard-taxonomy-edit-form.js');
+  $form['#attached']['js'][] = drupal_get_path('module', 'springboard_taxonomy') . '/js/jquery.columnizer.min.js';
+  $form['#attached']['js'][] = drupal_get_path('module', 'springboard_taxonomy') . '/js/springboard-taxonomy-edit-form.js';
   // Include CSS for special layout.
-  drupal_add_css(drupal_get_path('module', 'springboard_taxonomy') . '/css/springboard-taxonomy-edit-form.css');
+  $form['#attached']['css'][] = drupal_get_path('module', 'springboard_taxonomy') . '/css/springboard-taxonomy-edit-form.css';
 
   // Organization Issues selection.
   if (isset($form['field_sba_organization_issues']) && !empty($form['field_sba_organization_issues'][$language])) {
@@ -78,8 +186,8 @@ function springboard_taxonomy_taxonomy_form(&$form, &$form_state, $form_id) {
       '#collapsed' => FALSE,
     );
 
-    if (empty($options) && user_access('edit terms in ' . $vocabulary->vid)) {
-      $here = t('You can add terms !here.', array('!here' => l(t('here'), 'admin/structure/taxonomy/sba_organization_issues/add')));
+    if (empty($options) && user_access('administer organization issues')) {
+      $here = t('You can add terms !here.', array('!here' => l(t('here'), 'admin/springboard/taxonomy/sba_organization_issues/add')));
       $form['springboard_taxonomy_options']['organization_issues']['#description'] = $description . ' ' . $here;
     }
 
@@ -131,11 +239,50 @@ function springboard_taxonomy_field_delete_instance($instance) {
   }
 }
 
+/**
+ * Implements hook_theme().
+ */
 function springboard_taxonomy_theme() {
   return array(
     'springboard_taxonomy_confirm_message' => array(
       'variables' => array('changes' => NULL),
       'file' => 'springboard_taxonomy.admin.inc',
     ),
+  );
+}
+
+/**
+ * Implements hook_springboard_admin_alias_patterns().
+ *
+ * Put term edit screens under springboard backend paths.
+ */
+function springboard_taxonomy_springboard_admin_alias_patterns() {
+  return array(
+    'taxonomy/term/%/edit' => array(
+      'path' => array(
+        'regex' => '|^/taxonomy/term/([0-9]+)/edit$|',
+        'replacement' => 'taxonomy/term/$1/edit',
+      ),
+      'alias' => array(
+        'regex' => '|^springboard/taxonomy/([0-9]+)/edit$|',
+        'replacement' => 'springboard/taxonomy/$1/edit',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_springboard_admin_admin_menu_items_alter().
+ *
+ * Put the link to the admin page under the springboard/settings/config.
+ */
+function springboard_taxonomy_springboard_admin_admin_menu_items_alter(&$items) {
+  $items['admin/springboard/settings']['_children']['admin/springboard/settings/config']['_children']['admin/springboard/taxonomy/sba_organization_issues'] = array(
+    'link_path' => 'admin/springboard/taxonomy/sba_organization_issues',
+    'link_title' => t('Organization Issues'),
+    'menu_name' => 'springboard_admin_menu',
+    'expanded' => 1,
+    'customized' => 1,
+    'weight' => 1,
   );
 }

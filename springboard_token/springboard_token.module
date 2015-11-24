@@ -1,0 +1,283 @@
+<?php
+
+/**
+ * Implements hook_theme_registry_alter().
+ */
+function springboard_token_theme_registry_alter(&$theme_registry) {
+  if (isset($theme_registry['token_tree'])) {
+    $theme_registry['token_tree']['function'] = 'theme_springboard_token_token_tree';
+    $theme_registry['token_tree']['theme path'] =  drupal_get_path('module', 'springboard_token');
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function springboard_token_theme() {
+
+  $info['springboard_token_token_tree'] = array(
+    'variables' => array(
+      'token_types' => array(),
+      'global_types' => TRUE,
+      'click_insert' => TRUE,
+      'show_restricted' => FALSE,
+      'recursion_limit' => 3,
+      'dialog' => FALSE,
+    ),
+  );
+
+  return $info;
+}
+
+/**
+ * Modified version of Token module's theme_token_tree().
+ */
+function theme_springboard_token_token_tree($variables) {
+  module_load_include('inc','token', 'token.pages');
+  if (!empty($variables['dialog'])) {
+    return theme_token_tree_link($variables);
+  }
+
+  $token_types = $variables['token_types'];
+  $info = token_get_info();
+  if ($token_types == 'all') {
+    $token_types = array_keys($info['types']);
+  }
+  elseif ($variables['global_types']) {
+    $token_types = array_merge($token_types, token_get_global_token_types());
+  }
+
+  $node = new stdClass;
+  if (is_numeric(arg(1))) {
+    $node = node_load(arg(1));
+  }
+
+  if (isset($node->field_fundraiser_internal_name)) {
+    $type = 'fundraiser';
+  }
+  elseif(isset($node->type)) {
+    $type = $node->type;
+  }
+  else {
+    $type = '';
+  }
+
+  $allowed_categories = springboard_token_get_allowed_categories($type);
+  $allowed_tokens = springboard_token_get_allowed_tokens($type);
+
+  // Remove unwanted categories.
+  if (!empty($allowed_categories)) {
+    foreach ($info['types'] as $key => $token_set) {
+      if (!in_array($key, $allowed_categories)) {
+        unset($info['types'][$key]);
+        unset($info['tokens'][$key]);
+      }
+    }
+  }
+
+  $element = array(
+    '#cache' => array(
+      'cid' => 'tree-rendered:' . hash('sha256', serialize(array('token_types' => $token_types, 'global_types' => NULL) + $variables)),
+      'bin' => 'cache_token',
+    ),
+  );
+  if ($cached_output = token_render_cache_get($element)) {
+    return $cached_output;
+  }
+
+  $options = array(
+    'flat' => TRUE,
+    'restricted' => $variables['show_restricted'],
+    'depth' => $variables['recursion_limit'],
+  );
+  $multiple_token_types = (count($token_types) > 1);
+  $rows = array();
+
+  foreach ($info['types'] as $type => $type_info) {
+    if (!in_array($type, $token_types)) {
+      continue;
+    }
+    if ($multiple_token_types) {
+      $row = _token_token_tree_format_row($type, $type_info, TRUE);
+      unset($row['data']['value']);
+      $rows[] = $row;
+    }
+    $tree = token_build_tree($type, $options);
+
+    foreach ($tree as $token => $token_info) {
+      if (!empty($token_info['restricted']) && empty($variables['show_restricted'])) {
+        continue;
+      }
+      if ($multiple_token_types && !isset($token_info['parent'])) {
+        $token_info['parent'] = $type;
+      }
+
+      // Remove unwanted tokens.
+      // We never use the tokens in the if statement.
+      // "sbp_" prevents duplicate sb profile entries.
+      if(strpos($token, 'sbp_') === FALSE
+        && strpos($token, 'donation:node') === FALSE
+        && strpos($token, 'donation:user:') === FALSE
+        && strpos($token, 'site:current-user') === FALSE
+      ) {
+        if (!empty($allowed_tokens) && in_array($token, array_keys($allowed_tokens))) {
+          $token_info['description'] = $allowed_tokens[$token_info['raw token']];
+          $row = _token_token_tree_format_row($token, $token_info);
+          unset($row['data']['value']);
+          $rows[] = $row;
+        }
+        else {
+          $row = _token_token_tree_format_row($token, $token_info);
+          unset($row['data']['value']);
+          $rows[] = $row;
+        }
+      }
+    }
+  }
+
+  $element += array(
+    '#theme' => 'tree_table',
+    '#header' => array(
+      t('Name'),
+      t('Token'),
+      t('Description'),
+    ),
+    '#rows' => $rows,
+    '#attributes' => array('class' => array('token-tree')),
+    '#empty' => t('No tokens available'),
+    '#attached' => array(
+      'js' => array(drupal_get_path('module', 'token') . '/token.js'),
+      'css' => array(drupal_get_path('module', 'token') . '/token.css'),
+      'library' => array(array('token', 'treeTable')),
+    ),
+  );
+
+  if ($variables['click_insert']) {
+    $element['#caption'] = t('Click a token to insert it into the field you\'ve last clicked.');
+    $element['#attributes']['class'][] = 'token-click-insert';
+  }
+
+  $output = drupal_render($element);
+  token_render_cache_set($output, $element);
+  return $output;
+}
+
+/**
+ * @param $type
+ * @return array
+ */
+function springboard_token_get_allowed_categories($type) {
+  $allowed_categories = array();
+  if ($type == 'fundraiser') {
+    $allowed_categories = array(
+      'date',
+      'donation',
+      'sb_social',
+      'site',
+      'commerce-payment-transaction',
+      'commerce-order'
+    );
+  }
+  if ($type == 'sba_social_action' || $type == 'sba_message_action') {
+    $allowed_categories = array(
+      'action',
+      'date',
+      'donation',
+      'sb_social',
+      'site',
+    );
+  }
+  return $allowed_categories;
+}
+
+/**
+ * @param $type
+ * @return array
+ */
+function springboard_token_get_allowed_tokens($type) {
+  $allowed_tokens = array();
+
+  switch ($type) {
+    case 'fundraiser':
+      $allowed_tokens = array(
+        '[donation:address]' => '	Donor address',
+        '[donation:address_line_2]' => '	Donor address line 2',
+        '[donation:city]' => '	Donor city',
+        '[donation:country]' => '	Donor country',
+        '[donation:user]' => '	Donor\'s user ID',
+        '[donation:amount]' => '	Donation amount',
+        '[donation:card_expiration_month]' => '	Payment card expiration month',
+        '[donation:card_expiration_year]' => '	Payment card expiration year',
+        '[donation:card_type]' => '	Payment card type',
+        '[donation:currency:code]' => '	Donation currency code (eg. "USD")',
+        '[donation:currency:name]' => '	Donation currency name (eg. "United States Dollar")',
+        '[donation:currency:symbol]' => '	Donation currency symbol (eg. "$")',
+        '[current-date:custom:?]' => '	Current date, custom format',
+        '[current-date:long]' => '	Current date, long format (Wednesday, September 23, 2015 - 09:06)',
+        '[current-date:medium]' => '	Current date, medium format (Wed, 09/23/2015 - 09:06)',
+        '[current-date:short]' => '	Current date, short format (09/23/2015 - 09:06)',
+        '[donation:did]' => '	Donation ID',
+        '[donation:order:commerce_customer_billing]' => '	Donor full name and address',
+        '[donation:order:created]' => '	Donation date',
+        '[donation:order:created:custom:?]' => '	Donation date, custom format',
+        '[donation:order:created:long]' => '	Donation Date, long format (Wednesday, September 23, 2015 - 09:06)',
+        '[donation:order:created:medium]' => '	Donation date, medium format (Wed, 09/23/2015 - 09:06)',
+        '[donation:order:created:short]' => '	Donation date, short format (09/23/2015 - 09:06)',
+        '[donation:order:commerce-line-items]' => '	Donation line item',
+        '[donation:order:commerce-line-items:1]' => '	Donation line item 1',
+        '[donation:order:commerce-line-items:2]' => '	Donation line item 2',
+        '[donation:order:commerce-line-items:3]' => '	Donation line item 3',
+        '[donation:order:status-title]' => '	Donation status (eg. "Payment Received")',
+        '[donation:payment-transaction:remote-id]' => '	Payment transaction ID at gateway',
+        '[donation:payment-transaction:remote-status]' => '	Payment transaction status at gateway (eg. "Captured")',
+        '[donation:payment-transaction:status]' => '	Payment transaction status in Springboard (eg, "Success")',
+        '[donation:payment-transaction:transaction-id]' => '	Payment transaction ID in Springboard',
+        '[donation:mail]' => '	Donor email address',
+        '[donation:first_name]' => '	Donor first name',
+        '[donation:amount_formatted]' => '	Donation amount with currency symbol and formatting ($1,000.00)',
+        '[donation:card_number]' => '	Last four digits of credit card number (1234)',
+        '[donation:last_name]' => '	Donor last name',
+        '[donation:payment_method]' => '	Donation payment method',
+        '[donation:frequency]' => '	Payment frequency indicator (Monthly/One-time)',
+        '[donation:recurs_monthly]' => '	Recurring donation indicator (Yes/No)',
+        '[donation:state]' => '	Donor state',
+        '[donation:zip]' => '	Donor postal code',
+        '[sb_social:email_message]' => '	Shared message email body',
+        '[sb_social:email_share_link]' => '	Email share link',
+        '[sb_social:email_subject]' => '	Shared message email subject',
+        '[sb_social:facebook_share_link]' => '	Facebook share link',
+        '[sb_social:facebook_description]' => '	Facebook share description',
+        '[sb_social:facebook_image]' => '	Facebook share image',
+        '[sb_social:facebook_title]' => '	Facebook share title',
+        '[sb_social:share_links]' => '	Social share links',
+        '[sb_social:twitter_share_link]' => '	Twitter share link',
+        '[sb_social:twitter_message]' => '	Twitter message (Tweet)',
+        '[site:mail]' => '	Website email',
+        '[site:login-url]' => '	Website login URL',
+        '[site:name]' => '	Website name',
+        '[site:slogan]' => '	Website slogan',
+        '[site:url]' => '	Full website URL',
+        '[site:url-brief]' => '	Website URL, no "http://"',
+//        '[action:all_messages]' => '	All messages',
+//        '[action:delivered_messages]' => '	Delivered messages',
+//        '[action:undelivered_messages]' => '	Undelivered messages',
+//        '[springboard_petition:recent_signers]' => '	List of people who recently signed petitions'
+      );
+      break;
+  }
+  return $allowed_tokens;
+}
+
+/**
+ * @param $type
+ * @return array
+ */
+//function springboard_token_get_unallowed_tokens($type) {
+//  $unallowed_tokens = array(
+//    '[site:current-user]',
+//    '[donation:node]',
+//    '[donation:user:]',
+//    'sbp_'
+//  );
+//  return $unallowed_tokens;
+//}

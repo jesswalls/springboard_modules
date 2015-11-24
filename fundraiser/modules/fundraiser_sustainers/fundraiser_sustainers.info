@@ -32,4 +32,5 @@ files[] = tests/fundraiser_sustainers.test
 files[] = tests/fundraiser_sustainers_health_checks.test
 files[] = tests/fundraiser_sustainers_insights.test
 files[] = tests/fundraiser_sustainers_processing_exception_handling.test
+files[] = tests/fundraiser_sustainers_auto_cancel.test
 files[] = tests/fundraiser_sustainers_delayed_creation.test

@@ -69,5 +69,5 @@ function webform_ab_total_conversions_config_summary($config) {
  *   Webform A/B Test node
  */
 function webform_ab_total_conversions_check_win($config, $webform_details, $test_node) {
-  return ($webform_details['conversions'] >= $config['conversions']);
+  return isset($webform_details['conversions']) ? $webform_details['conversions'] >= $config['conversions'] : FALSE;
 }

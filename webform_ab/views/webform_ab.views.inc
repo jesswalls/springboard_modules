@@ -7,7 +7,7 @@
  * and `webform_ab_tests` tables. This allows site builders access to
  * Webform A/B metadata.
  */
-function webform_ab_views_views_data_alter(&$data) {
+function webform_ab_views_data_alter(&$data) {
   $data['node']['nid_to_webform_ab'] = array(
     'relationship' => array(
       'base' => 'webform_ab',
@@ -40,7 +40,7 @@ function webform_ab_views_views_data_alter(&$data) {
  * to the `node` table, in order to pull in additional node data about individual
  * webforms being used in A/B tests, if needed.
  */
-function webform_ab_views_views_data(){
+function webform_ab_views_data(){
   // Webform_AB table.
   $data['webform_ab']['table']['group'] = t('Webform A/B Tests');
   $data['webform_ab']['nid'] = array(
@@ -98,7 +98,7 @@ function webform_ab_views_views_data(){
     'field' => array(
       'title' => t('Operations links'),
       'help' => t('Display the operations links for the Webform A/B test.'),
-      'handler' => 'webform_ab_views_handler_field_operations',
+      'handler' => 'webform_ab_handler_field_operations',
     ),
   );
   

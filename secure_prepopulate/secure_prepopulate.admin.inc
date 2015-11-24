@@ -32,12 +32,30 @@ function secure_prepopulate_admin_settings($form, &$form_state) {
     ),
     '#default_value' => variable_get('secure_prepopulate_precedence', 'url'),
   );
-  $form['secure_prepopulate_expired_date_limit'] = array(
+  $form['secure_prepopulate_expiration_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Pre-populated token expiration settings'),
+  );
+  $form['secure_prepopulate_expiration_settings']['secure_prepopulate_toggle_expiration']= array(
+    '#type' => 'checkbox',
+    '#title' => t('Pre-populated tokens never expire'),
+    '#description' => t('Check this setting to allow the pre-population token to be used on multiple site visits.'),
+    '#default_value' => variable_get('secure_prepopulate_toggle_expiration', 0),
+  );
+  $form['secure_prepopulate_expiration_settings']['secure_prepopulate_expired_date_limit'] = array(
     '#type' => 'textfield',
     '#size' => 6,
     '#title' => t('Number of days before entries are cleared from the expired table'),
     '#description' => t('Clean out entries from the expired table that are older than the given amount of days.'),
     '#default_value' => variable_get('secure_prepopulate_expired_date_limit', 30),
+    '#states' => array( // Disable this field if "pre-populated tokens never expire" is checked; otherwise enable.
+      'disabled' => array(
+        ':input[name="secure_prepopulate_toggle_expiration"]' => array('checked' => TRUE),
+      ),
+      'enabled' => array(
+        ':input[name="secure_prepopulate_toggle_expiration"]' => array('checked' => FALSE),
+      ),
+    ),
   );
   return system_settings_form($form);
 }
@@ -107,32 +125,18 @@ function secure_prepopulate_token_generator($form, $form_state) {
     '#title' => t('City'),
   );
 
-  if (module_exists('fundraiser_ubercart')) {
-    $countries = fundraiser_ubercart_get_countries();
-    foreach ($countries->countries as $country) {
-      if ($country->country_iso_code_2 == $default_country) {
-        $country_options[$country->country_iso_code_2] = $country->country_name;
-        $zones = $country->zones;
-        foreach ($zones as $zone) {
-          $state_options[$zone->zone_code] = $zone->zone_name;
-        }
-      }
-    }
+  // country
+  $form['secure_prepopulate']['country'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Country'),
+  );
 
-    $form['secure_prepopulate']['country'] = array(
-      '#type' => 'select',
-      '#title' => t('Country'),
-      '#options' => $country_options,
-      '#default_value' => $default_country,
-    );
-    $form['secure_prepopulate']['state'] = array(
-      '#type' => 'select',
-      '#title' => t('State or province'),
-      '#options' => $state_options,
-      '#prefix' => '<div class="secure-prepopulate-state-wrapper">',
-      '#suffix' => '</div>',
-    );
-  }
+  // state
+  $form['secure_prepopulate']['state'] = array(
+    '#type' => 'textfield',
+    '#title' => t('State or province'),
+  );
+
   // zip
   $form['secure_prepopulate']['zip'] = array(
     '#type' => 'textfield',

@@ -40,6 +40,16 @@ function springboard_advocacy_settings_form() {
     '#default_value' => variable_get('springboard_advocacy_debug', ''),
   );
 
+  $form['springboard_advocacy_test_email'] = array(
+    '#title' => t('Default test mode email address'),
+    '#description' => t('When a Message Action node is in test mode, messages are sent to a test mode email address instead of the designated targets. Please enter a default email to use for test mode. This can be overridden on a per node basis.'),
+    '#type' => 'textfield',
+    '#default_value' => variable_get('springboard_advocacy_test_email', ''),
+    '#required' => TRUE,
+    '#element_validate' => array('springboard_advocacy_email_validate'),
+  );
+
+
   $form['transaction'] = array(
     '#type' => 'fieldset',
     '#title' => t('Advocacy Server Configuration'),
@@ -119,4 +129,12 @@ function springboard_advocacy_url_validate($element, &$form_state) {
   if ($non_local !== FALSE && $https === FALSE) {
     form_error($element, t('You must use an "https" prefix when connecting to the gospringboard.io server.'));
   }
+}
+
+function springboard_advocacy_email_validate($element, &$form_state) {
+
+  if (!valid_email_address($form_state['values']['springboard_advocacy_test_email'], TRUE)) {
+    form_error($element, t('You must enter a valid email address'));
+  }
+
 }

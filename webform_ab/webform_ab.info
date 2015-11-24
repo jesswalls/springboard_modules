@@ -1,10 +1,12 @@
 name = Webform A/B Testing
-description = "Adds a content type for an A/B test of webforms."
+description = "Adds a content type for an A/B test of webforms plus a multivariate testing view."
 core = 7.x
 package = Webform Extra
 
 dependencies[] = webform
-dependencies[] = ctools
+dependencies[] = views
+
+files[] = webform_ab.views.inc
 files[] = webform_ab.admin.inc
 files[] = webform_ab.install
 files[] = webform_ab.module
@@ -12,9 +14,13 @@ files[] = win_conditions/percent_conversions.inc
 files[] = win_conditions/total_conversions.inc
 files[] = win_thresholds/minimum_hits.inc
 
+; Views:
+files[] = views/handlers/webform_ab_handler_field_operations.inc
+files[] = views/webform_ab.views_default.inc
+files[] = views/webform_ab.views.inc
+
 ; Information added by Drupal.org packaging script on 2015-02-06
 version = "7.x-2.3"
 core = "7.x"
 project = "webform_ab"
 datestamp = "1423236482"
-

@@ -41,7 +41,7 @@ function springboard_target_create_custom_targets_form() {
 function springboard_target_create_custom_targets_form_submit($form, &$form_state) {
   $input = $form_state['values'];
 
-  $api_call = new AdvocacyApiCall();
+  $api_call = springboard_advocacy_api_call();
   $target = $api_call->invokeClientMethod('createCustomTarget', $input);
 
   if (!empty($target->data)) {

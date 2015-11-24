@@ -139,7 +139,7 @@
 
     <?php if(!$use_layouts): ?>
       <?php print render($content['sba_quicksign']); ?>
-      <?php if(!empty($participants)): ?>
+      <?php if(!empty($participants) && $show_participants_block): ?>
         <div id="participants-container" >
           <h4>Recent participants</h4>
           <?php print $participants ?>

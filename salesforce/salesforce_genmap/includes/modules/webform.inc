@@ -178,7 +178,7 @@ function webform_salesforce_genmap_map_field_info($node) {
   // Webform component fields.
   $fields['webform_map'] = array(
     '#type' => 'webform',
-    '#label' => t('Webform Componant'),
+    '#label' => t('Webform Component'),
     '#dedupe' => TRUE,
     '#fields' => array(),
   );

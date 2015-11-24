@@ -153,9 +153,9 @@ function _springboard_taxonomy_delete_instances($type) {
   module_load_include('inc', 'field', 'field.info');
   module_load_include('install', 'springboard_taxonomy');
   foreach (_springboard_taxonomy_field_instance($type) as $field_name => $field) {
-    if (field_info_instance('node', $field['field_instance']['field_name'], $type)) {
+    if ($instance = field_info_instance('node', $field['field_instance']['field_name'], $type)) {
       // Set false to avoid deleting base field if no more instances exist.
-      field_delete_instance($field['field_instance'], FALSE);
+      field_delete_instance($instance, FALSE);
     }
   }
 }

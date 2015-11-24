@@ -1,4 +1,4 @@
-div.ctools-modal-content {
+.node-type-sba-message-action div.ctools-modal-content {
     border-radius: 4px;
     background: none repeat scroll 0 0 #FFF;
     color: #000;
@@ -7,17 +7,19 @@ div.ctools-modal-content {
     border: 1px solid #ccccff;
     overflow: visible;
 }
-div.ctools-modal-content .modal-header {
+
+.node-type-sba-message-action div.ctools-modal-content .modal-header {
     background: #369;
     border-radius: 4px;
     padding:6px 6px 6px 12px;
 }
-div.ctools-modal-content .modal-title {
+
+.node-type-sba-message-action div.ctools-modal-content .modal-title {
     color: #fff;
     font-weight: normal;
-
 }
-div.ctools-modal-content a.close {
+
+.node-type-sba-message-action div.ctools-modal-content a.close {
     opacity: .8;
     font-size: 14px;
     line-height: 14px;
@@ -25,13 +27,14 @@ div.ctools-modal-content a.close {
     font-family: inherit;
     color: #fff;
     text-shadow: none;
-
 }
-div.ctools-modal-content a.close img{
+
+.node-type-sba-message-action div.ctools-modal-content a.close img{
     padding-left: 20px;
     top: 0;
 }
-#modal-content {
+
+.node-type-sba-message-action #modal-content .view-sba-messages-node {
     border: 1px solid #d5d5d5;
     border-radius: 5px;
     padding: 8px;
@@ -39,27 +42,30 @@ div.ctools-modal-content a.close img{
     margin: 20px auto;
 }
 
-#modal-content .view-sba-messages-node {
+.node-type-sba-message-action #modal-content .view-sba-messages-node {
     position:relative;
-    height: 100%;
+    height: auto;
 }
-#modal-content .view-sba-messages-node  .view-content{
+
+.node-type-sba-message-action #modal-content .view-sba-messages-node  .view-content{
     position:relative;
-    top: 60px;
+    top: 0px;
     padding: 0 1em;
 }
-#modal-content .view-sba-messages-node .item-list {
+
+.node-type-sba-message-action #modal-content .view-sba-messages-node .item-list {
     position: absolute;
     top: 0;
     border-bottom: 1px solid #ccc;
     width: 100%;
     height: 40px;
 }
-#modal-content ul.pager {
-    margin-top:0;
 
+.node-type-sba-message-action #modal-content .view-sba-messages-node ul.pager {
+    margin-top:0;
 }
-#modal-content .pager li > a, .pager li > span {
+
+.node-type-sba-message-action #modal-content .view-sba-messages-node .pager li > a, .pager li > span {
     display: inline-block;
     padding: 5px 14px;
     background-color: #FFF;
@@ -67,10 +73,21 @@ div.ctools-modal-content a.close img{
     border-radius: 0;
 }
 
-#modal-content .views-field {
+.node-type-sba-message-action #modal-content .view-sba-messages-node .views-row {
+    margin-bottom: 1.5em;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 1em;
+}
+
+.node-type-sba-message-action #modal-content .view-sba-messages-node .views-row-last {
+    border-bottom: none;
+}
+
+.node-type-sba-message-action #modal-content .view-sba-messages-node .views-field {
     margin-bottom: 1em;
 }
-#modal-content .views-label {
+
+.node-type-sba-message-action #modal-content .view-sba-messages-node .views-label {
     margin-bottom: 0.5em;
     font-weight: bold;
 }

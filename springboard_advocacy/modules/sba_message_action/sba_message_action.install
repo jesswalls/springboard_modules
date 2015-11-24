@@ -36,71 +36,6 @@ function sba_message_action_schema() {
     'primary key' => array('nid'),
   );
 
-  // Opt in tracking table.
-  $schema['springboard_action_opt_in'] = array(
-    'description' => 'Store message action optin.',
-    'fields' => array(
-      'sid' => array(
-        'description' => 'Webform submission id.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'nid' => array(
-        'description' => 'Message action node id',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'uid' => array(
-        'description' => 'Signer user id.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'opt_in' => array(
-        'description' => 'Track user opt-in to show their signature per message action.',
-        'type' => 'int',
-        'size' => 'tiny',
-        'not null' => FALSE,
-        'default' => 0,
-      ),
-      'created' => array(
-        'description' => 'Submission timestamp',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-    ),
-    'primary key' => array('sid'),
-  );
-
-  // Opt in tracking table.
-  $schema['springboard_action_opt_in_block'] = array(
-    'description' => 'Store message action optin.',
-    'fields' => array(
-      'nid' => array(
-        'description' => 'Message action node id',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'visibility' => array(
-        'description' => 'Track user opt-in to show their signature per message action.',
-        'type' => 'int',
-        'size' => 'tiny',
-        'not null' => FALSE,
-        'default' => 0,
-      ),
-    ),
-    'primary key' => array('nid'),
-  );
-
   $schema['cache_deliverability_report'] = drupal_get_schema_unprocessed('system', 'cache');
   $schema['cache_deliverability_report']['description'] = 'Cache table for deliverability information about specific message action nodes.';
   $schema['cache_deliverability_target'] = drupal_get_schema_unprocessed('system', 'cache');
@@ -525,6 +460,89 @@ function sba_message_action_update_7020() {
         'email' => 1,
       );
       webform_component_update($field);
+    }
+  }
+}
+
+
+/**
+ * Update description of the test mode field.
+ */
+function sba_message_action_update_7021() {
+  $field = field_info_instance('node', 'field_sba_test_mode', 'sba_message_action');
+  if ($field) {
+    $field['description'] = t(
+      'Check this box to enable test mode. Messages will not be sent to any configured targets when test mode is enabled. Unpublished actions are always in test mode.'
+    );
+    field_update_instance($field);
+  }
+}
+
+/**
+ * Create the multi-step field.
+ */
+function sba_message_action_update_7022() {
+  module_load_include('inc', 'sba_message_action', 'includes/install/sba_message_action.install_fields');
+  _sba_message_action_create_node_fields(TRUE);
+}
+
+/**
+ * Sort default value for the multi-step field..
+ */
+function sba_message_action_update_7023() {
+
+  $result = db_query('select n.nid from {node} n
+    WHERE n.type = :type',
+    array(':type' => 'sba_message_action')
+  )->fetchCol();;
+
+  foreach ($result as $nid) {
+    $node = node_load($nid);
+    $wrapper = entity_metadata_wrapper('node', $node);
+    $wrapper->field_sba_action_flow->set('one');
+    $wrapper->save();
+  }
+}
+
+function sba_message_action_update_7024() {
+
+  $nodes = db_query('select n.nid, f.field_sba_action_flow_value from {node} n
+    LEFT JOIN {field_data_field_sba_action_flow} f on f.entity_id = n.nid
+    WHERE n.type = :type',
+    array(':type' => 'sba_message_action')
+  );
+
+  foreach ($nodes as $node) {
+    $cid = db_query('select wc.cid from {webform_component} wc
+      WHERE wc.nid = :nid AND wc.form_key = :key',
+      array(':nid' => $node->nid, ':key' => 'sba_action_is_multistep')
+    )->fetchAssoc();
+
+    if (!$cid) {
+      $field = array(
+        'nid' => $node->nid,
+        'form_key' => 'sba_action_is_multistep',
+        'pid' => 0,
+        'name' => t('Multi-step or one step?'),
+        'type' => 'hidden',
+        'value' => $node->field_sba_action_flow_value,
+        'weight' => 30,
+        'email' => 1,
+      );
+      webform_component_insert($field);
+
+      $field = array(
+        'nid' => $node->nid,
+        'form_key' => 'sba_multistep_complete',
+        'pid' => 0,
+        'name' => t('Multi-step Complete?'),
+        'type' => 'hidden',
+        'value' => '',
+        'weight' => 31,
+        'email' => 1,
+      );
+
+      webform_component_insert($field);
     }
   }
 }

@@ -143,6 +143,7 @@ function sba_message_action_build_preprocess(&$vars) {
     $table = $view->preview('block_1');
     $vars['participants'] = $table;
   }
+  $vars['show_participants_block'] = isset($vars['element']['#node']->show_my_name) ? $vars['element']['#node']->show_my_name : FALSE;
 
   $element = $vars['element'];
 

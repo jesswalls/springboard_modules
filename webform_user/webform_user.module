@@ -339,6 +339,18 @@ function _webform_user_toggle_webform($type, $is_enabled = TRUE) {
 }
 
 /**
+ * Implements hook_form_FORM_ID_alter() to remove the "no redirect (reload current page)" option
+ * if webform_user is enabled to prevent user creation.
+ */
+function webform_user_form_webform_configure_form_alter(&$form, &$form_state, $form_id) {
+  $node = node_load($form['nid']['#value']);
+  if (_webform_user_is_webform_user_node($node)) {
+    unset($form['submission']['redirection']['redirect']['#options']['none']);
+  }
+}
+
+
+/**
  * Implements hook_form_BASE_FORM_ID_alter() for node forms.
  */
 function webform_user_form_node_form_alter(&$form, &$form_state, $form_id) {

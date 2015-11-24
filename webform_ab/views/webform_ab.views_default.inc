@@ -7,7 +7,7 @@
 /**
  * Implements hook_views_default_views().
  */
-function webform_ab_views_views_default_views() {
+function webform_ab_views_default_views() {
   $views = array();
   $view = new view();
   $view->name = 'webform_ab_tests';

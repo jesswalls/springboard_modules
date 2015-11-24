@@ -40,7 +40,8 @@ function sba_message_action_taxonomy_form(&$form, &$form_state, $form_id) {
       '#collapsed' => FALSE,
       '#weight' => -1,
     );
-    $form['field_sba_legislative_issues'][$language]['#title'] = '';
+    $form['field_sba_legislative_issues'][$language]['#title'] = 'You must select at least one legislative issue';
+    $form['field_sba_legislative_issues'][$form['language']['#value']]['#required'] = TRUE;
     $form['springboard_taxonomy_options']['legislative_issues']['field_sba_legislative_issues']
       = $form['field_sba_legislative_issues'];
     unset($form['field_sba_legislative_issues']);
@@ -75,7 +76,7 @@ function sba_message_action_form_taxonomy_overview_vocabularies_alter(&$form, &$
  * Hide edit links on the terms page.
  */
 function sba_message_action_form_taxonomy_overview_terms_alter(&$form, &$form_state) {
-  if($form['#vocabulary']->machine_name == 'sba_legislative_issues') {
+  if(isset($form['#vocabulary']) && $form['#vocabulary']->machine_name == 'sba_legislative_issues') {
     $form['actions']['#access'] = FALSE;
     foreach (element_children($form) as $key) {
       $form[$key]['edit']['#access'] = FALSE;

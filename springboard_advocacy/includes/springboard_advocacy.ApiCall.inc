@@ -56,6 +56,9 @@ class AdvocacyApiCall {
    *    The API response in an array.
    */
   private function setDebug(array $info) {
+    if (!empty($info['response']->data) && isset($info['response']->data->maintenanceMode) && empty($info['response']->data->maintenanceMode)) {
+      return;
+    }
     watchdog('advocacy', 'Advocacy API Call details: !message', array('!message' => '<pre>' . check_plain(print_r($info, TRUE)) . '</pre>'), WATCHDOG_DEBUG);
   }
 

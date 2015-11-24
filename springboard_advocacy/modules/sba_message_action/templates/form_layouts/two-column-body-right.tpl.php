@@ -8,6 +8,30 @@
 
 <div id="message-action-form-2col-column-wrapper" class="container-fluid action-body-right">
   <div class="row-fluid">
+
+
+    <div id="right" class="span5 message-column">
+      <?php if(!empty($image)): ?>
+        <div id="image">
+          <?php print $image; ?>
+        </div>
+      <?php endif; ?>
+      <div id="call-to-action">
+        <div id="call-to-action-call"><h2><?php print $call; ?></h2></div>
+        <div id="call-to-action-body"> <?php print $body; ?></div>
+        <?php if(!empty($quicksign)): ?>
+          <div id="quicksign-container"><?php print $quicksign ?></div>
+        <?php endif; ?>
+        <?php if(!empty($participants) && $show_participants_block): ?>
+          <div id="participants-container">
+            <h4 >Recent participants</h4>
+            <?php print $participants ?>
+          </div>
+        <?php endif; ?>
+      </div>
+      <p><?php print $social ?></p>
+      </div>
+
     <div id="left" class="span7 message-column">
 
       <fieldset id="take-action-wrapper" class = "form-wrapper"><legend><?php print $form_legend ?></legend>
@@ -23,28 +47,6 @@
           <?php print $close_form_tag ?>
       </fieldset>
     </div>
-
-    <div id="right" class="span5 message-column">
-      <?php if(!empty($image)): ?>
-        <div id="image">
-          <?php print $image; ?>
-        </div>
-      <?php endif; ?>
-      <div id="call-to-action">
-        <div id="call-to-action-call"><h2><?php print $call; ?></h2></div>
-        <div id="call-to-action-body"> <?php print $body; ?></div>
-        <?php if(!empty($quicksign)): ?>
-          <div id="quicksign-container"><?php print $quicksign ?></div>
-        <?php endif; ?>
-        <?php if(!empty($participants)): ?>
-          <div id="participants-container">
-            <h4 >Recent participants</h4>
-            <?php print $participants ?>
-          </div>
-        <?php endif; ?>
-      </div>
-      <p><?php print $social ?></p>
-      </div>
     </div>
   </div>
 </div>

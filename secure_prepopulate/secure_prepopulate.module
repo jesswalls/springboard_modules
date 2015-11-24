@@ -233,15 +233,17 @@ function secure_prepopulate_form_webform_client_form_alter(&$form, $form_state) 
   if (!empty($form_state['submitted'])) {
     return;
   }
-
   $components = $node->webform['components'];
   // Create an data structure that will tell us exactly where each webform component lives in the FAPI array.
   $component_hierarchy = _secure_prepopulate_parse_form($node->nid, $components);
 
   // Try to prepopulate any fields found in the prepopulate_data array.
   foreach ($prepopulate_data as $form_key => $value) {
-
-    if (isset($component_hierarchy[$form_key]) && $field = & _secure_prepopulate_find_field($form, $component_hierarchy[$form_key])) {
+    if (!isset($component_hierarchy[$form_key])) {
+      continue;
+    }
+    $field = & _secure_prepopulate_find_field($form, $component_hierarchy[$form_key]);
+    if ($field) {
       switch ($field['#type']) {
         case 'select':
           $valid = array_keys($field['#options']);
@@ -272,9 +274,12 @@ function secure_prepopulate_form_webform_client_form_alter(&$form, $form_state) 
       }
     }
   }
+
   // Clear out any other form fields that might be populated by another module.
+  $dynamic_gift_string_field_ids = array('amount', 'other_amount');
   foreach ($component_hierarchy as $form_key => $value) {
-    if (!array_key_exists($form_key, $prepopulate_data)) { // the key is not in the prepopuldate data, so lets clear it out
+    if (!in_array($form_key, $dynamic_gift_string_field_ids)
+      && !array_key_exists($form_key, $prepopulate_data)) { // the key is not in the prepopuldate data, so lets clear it out
       if ($field = & _secure_prepopulate_find_field($form, $component_hierarchy[$form_key])) {
         // set back to original default value by using the webform component definition
         if (isset($field['#type'])) {
@@ -298,18 +303,19 @@ function secure_prepopulate_form_webform_client_form_alter(&$form, $form_state) 
               $field['day']['#default_value'] = $default_values['day'];
               $field['year']['#default_value'] = $default_values['year'];
               break;
-            case 'checkboxes':
-              $field[$field['#webform_component']['form_key']]['#default_value'] = $field['#webform_component']['value'];
-              break;
             default:
+              if (!isset($field['#default_value'])) {
+                break;
+              }
               if (strpos($field['#webform_component']['value'], '%get[') !== FALSE) {
                 // If the default value is %get[something], set the field to nothing.
                 $field['#default_value'] = NULL;
               }
+              elseif (is_array($field['#default_value'])) {
+                $field['#default_value'] = array($field['#webform_component']['value']);
+              }
               else {
-                // For all other component default values, copy them to $field.
-                // $field['#value'] = $field['#webform_component']['value'];
-                // $field['#default_value'] = $field['#webform_component']['value'];
+                $field['#default_value'] = $field['#webform_component']['value'];
               }
               break;
           }
@@ -403,6 +409,11 @@ function secure_prepopulate_is_expired($qs) {
  *   The query string to expire.
  */
 function secure_prepopulate_expire($qs) {
+  // If the "Pre-populated tokens never expire" setting is enabled then do not set an expiration timestamp:
+  if (variable_get('secure_prepopulate_toggle_expiration', 0)) {
+    return;
+  }
+
   $qs_hashed = md5($qs);
   $record = new stdClass();
   $record->hash = $qs_hashed;

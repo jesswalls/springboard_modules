@@ -21,6 +21,18 @@ function fundraiser_tickets_menu() {
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
   );
+
+  $items['node/%/tickets/%/delete'] = array(
+    'title' => 'Ticket Deletion',
+    'description' => 'Ticket deletion',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fundraiser_tickets_delete_ticket_form', 1, 3),
+    'access arguments' => array('allow node-specific ticket deletion'),
+    'type' => MENU_CALLBACK,
+    'file' => 'fundraiser_tickets.forms.inc',
+    'weight' => 1,
+  );
+
   $items['node/%node/tickets/settings'] = array(
     'title' => 'Settings',
     'description' => 'Ticket settings',
@@ -45,6 +57,18 @@ function fundraiser_tickets_menu() {
   );
 
   return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function fundraiser_tickets_permission() {
+  return array(
+    'allow node-specific ticket deletion' => array(
+      'title' => t('Delete any ticket'),
+      'description' => t('Delete tickets from any fundraiser ticket form.'),
+    ),
+  );
 }
 
 /**
@@ -949,29 +973,74 @@ function fundraiser_tickets_commerce_product_delete($product) {
 /**
  * Update the ticket level numbers that are saved in fields on the node.
  */
-function fundraiser_tickets_update_inventory($node_wrapper){
+function fundraiser_tickets_update_inventory($node_wrapper) {
   $ticket_types = $node_wrapper->fr_tickets_ticket_types->value();
 
-  if (is_array($ticket_types)){
-    $inventory_initial = 0;
-    $inventory_purchased = 0;
+  if (!is_array($ticket_types)) {
+    return;
+  }
 
-    // Loop through the ticket products and calculate the numbers
-    foreach ($ticket_types as $offset => $ticket_level){
-      $ticket_level_wrapper = entity_metadata_wrapper('commerce_product', $ticket_level);
+  $inventory_initial = 0;
+  $inventory_purchased = 0;
 
-      // Only include active tickets
-      if ($ticket_level_wrapper->status->value() == 1) {
-        $inventory_initial   += $ticket_level_wrapper->fr_tickets_quantity->value();
-        $inventory_purchased += $ticket_level_wrapper->fr_tickets_quantity_sold->value();
-      }
+  // Loop through the ticket products and calculate the numbers
+  foreach ($ticket_types as $offset => $ticket_level) {
+    $ticket_level_wrapper = entity_metadata_wrapper('commerce_product', $ticket_level);
+
+    // Only include active tickets
+    if ($ticket_level_wrapper->status->value() == 1) {
+      $inventory_initial   += $ticket_level_wrapper->fr_tickets_quantity->value();
+      $inventory_purchased += $ticket_level_wrapper->fr_tickets_quantity_sold->value();
     }
+  }
 
-    // Set these numbers on the node and save
-    $node_wrapper->fr_tickets_inventory_initial->set($inventory_initial);
-    $node_wrapper->fr_tickets_inventory_purchased->set($inventory_purchased);
-    $node_wrapper->fr_tickets_inventory_available->set($inventory_initial - $inventory_purchased);
-    $node_wrapper->save();
+  // Update these numbers via direct DB update to avoid node_save() overhead:
+  db_update('field_data_fr_tickets_inventory_available')
+    ->fields(array('fr_tickets_inventory_available_value' => $inventory_initial - $inventory_purchased))
+    ->condition('entity_id', $node_wrapper->getIdentifier())
+    ->condition('revision_id', $node_wrapper->vid->value())
+    ->execute();
+  db_update('field_revision_fr_tickets_inventory_available')
+    ->fields(array('fr_tickets_inventory_available_value' => $inventory_initial - $inventory_purchased))
+    ->condition('entity_id', $node_wrapper->getIdentifier())
+    ->condition('revision_id', $node_wrapper->vid->value())
+    ->execute();
+  db_update('field_data_fr_tickets_inventory_purchased')
+    ->fields(array('fr_tickets_inventory_purchased_value' => $inventory_purchased))
+    ->condition('entity_id', $node_wrapper->getIdentifier())
+    ->condition('revision_id', $node_wrapper->vid->value())
+    ->execute();
+  db_update('field_revision_fr_tickets_inventory_purchased')
+    ->fields(array('fr_tickets_inventory_purchased_value' => $inventory_purchased))
+    ->condition('entity_id', $node_wrapper->getIdentifier())
+    ->condition('revision_id', $node_wrapper->vid->value())
+    ->execute();
+
+  // If a new type of ticket exists, such as when an admin adds it, then apply the associated update:
+  foreach ($ticket_types as $delta => $ticket_data) {
+    if (isset($ticket_data->is_new) && $ticket_data->is_new == TRUE) {
+      $new_ticket_data = array(
+        'entity_type' => 'node',
+        'bundle' => 'ticketed_events',
+        'entity_id' => $node_wrapper->getIdentifier(),
+        'revision_id' => $node_wrapper->vid->value(),
+        'language' => $ticket_data->language,
+        'delta' => $delta,
+        'fr_tickets_ticket_types_product_id' => $ticket_data->product_id,
+      );
+      $new_ticket_added = TRUE;
+      db_insert('field_data_fr_tickets_ticket_types')
+        ->fields($new_ticket_data)
+        ->execute();
+      db_insert('field_revision_fr_tickets_ticket_types')
+        ->fields($new_ticket_data)
+        ->execute();
+    }
+  }
+
+  // Ensure the node-specific, admin ticket table updates if a new type of ticket is added:
+  if (isset($new_ticket_added)) {
+    cache_clear_all('field:node:' . $node_wrapper->getIdentifier(), 'cache_field');
   }
 }
 
@@ -1151,7 +1220,7 @@ function fundraiser_tickets_fundraiser_donation_process($donation) {
             // set the 'other_amount' to the value of the extra donation.
             $extra_donation = unserialize($ticket_amounts);
             if(!empty($extra_donation['fundraiser-tickets-extra-donation'])) {
-              $donation->donation['other_amount'] = number_format($extra_donation['fundraiser-tickets-extra-donation'], 2);
+              $donation->donation['other_amount'] = _fundraiser_amount_value_sanitize($extra_donation['fundraiser-tickets-extra-donation']);
               $donation->donation['amount'] = 'other';
             }
             break;

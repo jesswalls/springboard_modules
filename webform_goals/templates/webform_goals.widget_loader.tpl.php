@@ -28,7 +28,7 @@
   [webform_goal:end_date] - goal end date
   [webform_goal:progress-bar] - css progress bar
   [webform_goal:starter_message] - starter message
-  [webform_goal:progress-starter] - progress bar, or starter message (uses display threshold
+  [webform_goal:progress-starter] - deprecated, same as progress-bar
   [webform_goal:progress-raw] - total goal progress
   [webform_goal:progress-percent] - goal progress as a percentage of goal target
   [webform_goal:progress-percent-capped] - goal progress percent capped at 100 (useful for css)

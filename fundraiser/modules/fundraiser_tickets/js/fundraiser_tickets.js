@@ -69,7 +69,7 @@
       total = total + (parseFloat(price.amount.replace(/\,/g,'')) * $('#product-' + productId + '-ticket-quant').val());
     });
     if ($('#fundraiser-tickets-extra-donation').val()){
-      total = total + parseFloat($('#fundraiser-tickets-extra-donation').val());
+      total = total + parseFloat($('#fundraiser-tickets-extra-donation').val().replace(/\,/g,''));
     }
     return total;
   }
@@ -81,7 +81,7 @@
     var self = this;
     var extra = 0;
     if ($('#fundraiser-tickets-extra-donation').val()){
-      extra = parseFloat($('#fundraiser-tickets-extra-donation').val());
+      extra = parseFloat($('#fundraiser-tickets-extra-donation').val().replace(/\,/g,''));
     }
     return extra;
   }

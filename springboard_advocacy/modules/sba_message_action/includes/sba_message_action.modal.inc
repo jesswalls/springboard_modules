@@ -29,13 +29,13 @@ function sba_message_action_build_modal() {
   $message_window = array(
     'message-window-style' => array(
       'modalSize' => array(
-        'type' => 'fixed',
-        'width' => 600,
-        'height' => 440,
+        'type' => 'scale',
+        'width' => .8,
+        'height' => .8,
         'addWidth' => 10,
         'addHeight' => 100,
-        'contentRight' => 0,
-        'contentBottom' => 0,
+        'contentRight' => 25,
+        'contentBottom' => 25,
       ),
       'modalOptions' => array(
         'opacity' => .4,

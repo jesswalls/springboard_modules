@@ -282,7 +282,7 @@ function webform_confirmations_form_webform_configure_form_alter(&$form, &$form_
  */
 function _webform_confirmations_submit($form, &$form_state) {
   $confirmation['nid'] = $form_state['values']['nid'];
-  $confirmation['confirmation_page_title'] = check_plain($form_state['values']['confirmation']['confirmation_page_title']);
+  $confirmation['confirmation_page_title'] = $form_state['values']['confirmation']['confirmation_page_title'];
   _webform_confirmations_update($confirmation);
 }
 

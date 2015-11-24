@@ -364,13 +364,13 @@ function springboard_advocacy_target_branch() {
   $value_options = array(
     'SR|SS' => t('Both Chambers, State'),
     'FR|FS' => t('Both Chambers, Federal'),
-    'FS' => t('Federal Senate'),
+    'PRES01|PRES03' => t('Federal Executives'),
     'FR' => t('Federal House'),
+    'FS' => t('Federal Senate'),
+    'GOVNR' => t('State Executives'),
     'SR' => t('State House'),
     'SS' => t('State Senate'),
     'PRES01|PRES03|GOVNR' => t('State and Federal Executives'),
-    'PRES01|PRES03' => t('Federal Executives'),
-    'GOVNR' => t('State Executives'),
   );
   return $value_options;
 }
@@ -503,8 +503,8 @@ function springboard_advocacy_target_district() {
  */
 function springboard_advocacy_target_gender() {
   $value_options = array(
-    'M' => 'Male',
     'F' => 'Female',
+    'M' => 'Male',
     'O' => 'Other',
   );
   return $value_options;
@@ -669,9 +669,8 @@ function springboard_advocacy_preprocess_pager(&$variables, $hook) {
  *
  * Add ajax to views exposed form to enable district lookups by state.
  */
-function springboard_advocacy_form_views_exposed_form_alter(&$form, &$form_state, $form_id)
-{
-  if ($form_id == 'views_exposed_form' && $form_state['view']->name == 'targets') {
+function springboard_advocacy_form_views_exposed_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'views_exposed_form' && $form_state['view']->name == 'targets' && $form_state['view']->base_table ='advocacy') {
 
     // Committee autocomplete.
     $form['search_committee']['#autocomplete_path'] = 'message-action/committee/autocomplete';
@@ -760,7 +759,7 @@ function _springboard_advocacy_ajaxify_state_field(&$form, &$form_state, $form_i
  * @param $form_id
  */
 function  _springboard_advocacy_remove_unsubscribed_elements(&$form, &$form_state, $form_id) {
-  $api_call = new AdvocacyApiCall();
+  $api_call = springboard_advocacy_api_call();
   $subscription = $api_call->getSubscription();
   if ($subscription) {
 
@@ -833,7 +832,7 @@ function springboard_advocacy_update_districts_field_callback($form, $form_state
  */
 function springboard_advocacy_update_districts_field_options($form, $form_state)
 {
-  $api_call = new AdvocacyApiCall();
+  $api_call = springboard_advocacy_api_call();
   $subscription = $api_call->getSubscription();
   $options = $form['search_district_name']['#options'];
 
@@ -902,7 +901,7 @@ function springboard_advocacy_views_exposed_form_ajax_enable(&$form, &$form_stat
     );
     // Anonymous users don't get a token.
     if (!empty($form['#token'])) {
-      $form_info['form_token'] = $form['#token'];
+      $form_info['form_token'] = drupal_get_token($form['#token']);
     }
     foreach ($ajax_elements as $element_name) {
       $ajax_info[$element_name] = $form_info;

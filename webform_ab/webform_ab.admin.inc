@@ -199,8 +199,8 @@ function webform_ab_test_webforms($node) {
   }
   $return .= theme('table', array('header' => $headers, 'rows' => $rows));
   // Show a form to add more
-  $form = drupal_render(drupal_get_form('webform_ab_webform_list_add', $node));
-  $return .= $form;
+  $form = drupal_get_form('webform_ab_webform_list_add', $node);
+  $return .= drupal_render($form);
   return $return;
 }
 
@@ -291,8 +291,8 @@ function webform_ab_test_remove_webform($node, $webform_nid) {
     array(':test_nid' => $node->nid, ':webform_nid' => $webform_nid))->fetchField() > 0;
   if ($form_is_included) {
     // Show a confirmation form
-    drupal_set_message(t('The form has been removed from the A/B test.'));
-    return drupal_render(drupal_get_form('webform_ab_test_remove_webform_confirm', $node->nid, $webform_nid));
+    $form = drupal_get_form('webform_ab_test_remove_webform_confirm', $node->nid, $webform_nid);
+    return drupal_render($form);
   }
   else {
     // Somehow tried to remove a webform that isn't in the test
@@ -324,13 +324,22 @@ function webform_ab_test_remove_webform_confirm($form, &$form_state, $test_nid, 
  * Remove a webform from a test
  */
 function webform_ab_test_remove_webform_confirm_submit($form, &$form_state) {
-  db_delete('webform_ab_forms')
-    ->condition('test_nid', $form['#test_nid'])
-    ->condition('webform_nid', $form['#webform_nid'])
-    ->execute();
+  // Remove data specific to the form that is being removed from this A/B test:
+  $tables_to_update = array(
+    'webform_ab_forms',
+    'webform_ab_conversion',
+    'webform_ab_hits',
+  );
+  foreach ($tables_to_update as $table_name) {
+    db_delete($table_name)
+      ->condition('test_nid', $form['#test_nid'])
+      ->condition('webform_nid', $form['#webform_nid'])
+      ->execute();
+  }
+
   // Notify other modules that the webform is being removed
   module_invoke_all('webform_ab_remove_form', $form['#test_nid'], $form['#webform_nid']);
-  drupal_set_message(t('The webform has been removed.'));
+  drupal_set_message(t('The form has been removed from the A/B test.'));
   $form_state['redirect'] = 'node/' . $form['#test_nid'] . '/webforms';
 }
 

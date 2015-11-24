@@ -13,7 +13,7 @@ function sba_message_install() {
 
 
   entity_save('sba_message',
-    entity_create('sba_message_type', 
+    entity_create('sba_message_type',
       array(
         'label'=> 'SBA Message Action Message',
         'type' => 'sba_message_action_message')

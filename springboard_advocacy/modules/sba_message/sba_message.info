@@ -5,7 +5,7 @@ core = 7.x
 dependencies[] = draggableviews
 dependencies[] = entityreference_prepopulate
 dependencies[] = springboard_advocacy
-
+dependencies[] = entity
 
 files[] = sba_message.admin.inc
 files[] = sba_message.api_calls.inc

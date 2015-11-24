@@ -421,7 +421,7 @@
         $('#springboard-advocacy-message-form-container').append(finder);
         finder.append(recipContainer);
         finder.append(actions);
-        actions.append(err);
+        actions.prepend(err);
         $('.views-targets-button-wrapper').hide();
 
         // Editing a pre-existing message, append the recipients

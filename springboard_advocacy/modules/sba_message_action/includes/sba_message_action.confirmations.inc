@@ -10,6 +10,21 @@
  * @param $form_state
  */
 function sba_message_action_confirmation(&$form, &$form_state) {
+
+  $form['submission']['redirection']['format_message'] = array(
+    '#type' => 'container',
+    '#attributes' => array('class' => array('description')),
+    'message' => array(
+      '#markup' => t('If you are using a Custom URL redirect, the "Confirmation success message" above must be in a full html format.'),
+      '#suffix' => '<br /><br />',
+    ),
+    '#states' => array(
+      'visible' => array(
+        ':input[name=redirect]' => array('value' => 'url'),
+      ),
+    ),
+  );
+
   $form['submission']['confirmation']['#weight'] = -2;
   // Does this node have a custom confirmation record?
   $custom_status = isset($form['#node']->custom_confirmation) ? $form['#node']->custom_confirmation : 0;
@@ -53,7 +68,7 @@ function sba_message_action_confirmation(&$form, &$form_state) {
     '#cols' => 60,
     '#states' => array(
       'disabled' => array(
-        ':input[name="confirmation_fail[custom_confirmation]"]' => array('checked' => FALSE),
+        ':input[name="custom_confirmation"]' => array('checked' => FALSE),
       ),
     ),
   );

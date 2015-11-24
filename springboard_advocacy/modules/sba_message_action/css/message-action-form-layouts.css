@@ -244,8 +244,15 @@ fieldset[id*="edit-sba-messages-message"]  input[name*="subject"] {
 }
 
 .user-form-vertical-right #right,
-.action-message-left #right{
+.action-message-left #right,
+.action-message-right #right,
+.action-body-right #right {
     float: right;
+}
+
+.action-body-right #left,
+.action-message-right #left{
+    margin-left: 0;
 }
 
 .user-form-vertical-right #left,
@@ -295,4 +302,11 @@ fieldset[id*="edit-sba-messages-message"]  input[name*="subject"] {
         padding-left: 0;
     }
 
+}
+
+@media (max-width: 767px) {
+    .action-body-right #left,
+    .action--right #left{
+        clear: both;
+    }
 }

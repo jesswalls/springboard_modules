@@ -56,7 +56,13 @@ function fundraiser_tickets_order_ticket_types_form($form, &$form_state, $node){
         '#markup' => check_plain($product_wrapper->fr_tickets_threshold->value()),
       );
       $form['tickets'][$key]['edit_link'] = array(
-        '#markup' =>  l(t('edit'), 'admin/commerce/products/' . $product_wrapper->product_id->value() . '/edit', array('query' => array('destination' => 'node/' . $node->nid . '/tickets/tickets')))
+        '#markup' =>  l(t('edit'), 'admin/commerce/products/' . $product_wrapper->product_id->value() . '/edit',
+          array('query' => array('destination' => 'node/' . $node->nid . '/tickets/tickets')))
+      );
+      $form['tickets'][$key]['delete_link'] = array(
+        '#markup' =>  l(t('delete'),
+          'springboard/node/' . $node->nid . '/tickets/' . $product_wrapper->product_id->value() . '/delete',
+          array('query' => array('destination' => 'node/' . $node->nid . '/tickets/tickets')))
       );
 
       $form['tickets'][$key]['ticket_id'] = array(
@@ -89,6 +95,68 @@ function fundraiser_tickets_order_ticket_types_form($form, &$form_state, $node){
 }
 
 
+/**
+ * Provides a ticket deletion form separate from Commerce for more granular access.
+ */
+function fundraiser_tickets_delete_ticket_form($form, &$form_state, $node, $ticket_id) {
+
+  $product = commerce_product_load($ticket_id);
+  $form_state['product'] = $product;
+  $content = entity_view('commerce_product', array($product->product_id => $product));
+
+  $form = confirm_form($form,
+    t('Are you sure you want to delete ticket %title?', array('%title' => $product->title)),
+    '',
+    drupal_render($content) . '<p>' . t('Deleting this ticket cannot be undone.', array('@sku' => $product->sku)) . '</p>',
+    t('Delete'),
+    t('Cancel'),
+    'confirm'
+  );
+
+  // Use commerce code to block deletion if this ticket has any orders:
+  commerce_product_reference_form_commerce_product_product_delete_form_alter($form, $form_state);
+
+  // Make text ticket-specific if Commerce blocks form submit due this ticket (product) having orders:
+  if (isset($form['actions']['submit']['#disabled']) && $form['actions']['submit']['#disabled'] == TRUE) {
+    $form['description']['#markup'] = str_replace(
+      t('This product is referenced by a line item on'),
+      t('WARNING: This ticket has been purchased via'),
+      $form['description']['#markup']
+    );
+    // No link for disabling ticket is needed so remove that call to action:
+    $form['description']['#markup'] = str_replace(
+      t('Disable it instead.'),
+      '',
+      $form['description']['#markup']
+    );
+  } 
+
+  // Remove confusing and unneeded Commerce message about which nodes this product references:
+  $form['description']['#markup'] = preg_replace(
+    '/<p>' . t('This product is referenced.') . '*?<div class="item-list">.*?<\/div>/s',
+    '', $form['description']['#markup']);
+
+  return $form;
+}
+
+/**
+ * Process either ticket deletion or redirection if "Cancel" is hit.
+ */
+function fundraiser_tickets_delete_ticket_form_submit($form, &$form_state) {
+  $product = $form_state['product'];
+
+  if (commerce_product_delete($product->product_id)) {
+    drupal_set_message(t('Ticket %title has been deleted.', array('%title' => $product->title)));
+    watchdog('commerce_product', 'Deleted ticket product %title (SKU: @sku).',
+      array('%title' => $product->title, '@sku' => $product->sku), WATCHDOG_NOTICE);
+  }
+  else {
+    drupal_set_message(t('Ticket %title could not be deleted.', array('%title' => $product->title)), 'error');
+  }
+
+}
+
+
 function theme_fundraiser_tickets_theme_order_ticket_types_form($vars) {
   $element = $vars['element'];
   drupal_add_tabledrag('form_id', 'order', 'sibling', 'rank-weight'); // needed for table dragging
@@ -102,9 +170,14 @@ function theme_fundraiser_tickets_theme_order_ticket_types_form($vars) {
     'sold_out_message' => t('Sold out message'),
     'warning' => t('Warning'),
     'edit_link' => t(''),
+    'delete_link' => t(''),
     'weight' => t('Weight'),
 
   );
+
+  if (!user_access('allow node-specific ticket deletion')) {
+    unset($header['delete_link']);
+  }
 
   $rows = array();
   foreach (element_children($element) as $key) {

@@ -492,3 +492,81 @@ function _springboard_advocacy_webform_submission_flatten($nid, $submit_tree, $s
   $flat_array = array_intersect_key($flat_array, array_combine($submission_keys, $submission_keys));
   return $flat_array;
 }
+
+function springboard_advocacy_springboard_admin_alias_patterns() {
+  return array(
+    'node/%/message-preview' => array(
+      'path' => array(
+        'regex' => '|^/node/([0-9]+)/message-preview$|',
+        'replacement' => 'node/$1/message-preview',
+      ),
+      'alias' => array(
+        'regex' => '|^springboard/node/([0-9]+)/message-preview$|',
+        'replacement' => FALSE,  // don't redirect confirmation pages to springboard/...
+      ),
+    ),
+  );
+}
+
+/**
+ * Log opt in.
+ *
+ * @param int $nid
+ *   Node ID.
+ * @param int $uid
+ *   User ID.
+ * @param bool $opt_in
+ *   User opt in TRUE/FALSE.
+ * @param int $sid
+ *   Submission ID.
+ */
+function springboard_advocacy_log_opt_in($nid, $uid, $opt_in, $sid) {
+
+  db_delete('springboard_action_opt_in')
+    ->condition('sid', $sid, '=')
+    ->execute();
+
+  $record = array(
+    'sid' => $sid,
+    'nid' => $nid,
+    'uid' => $uid,
+    'opt_in' => $opt_in ? 1 : 0,
+    'created' => time(),
+  );
+
+  drupal_write_record('springboard_action_opt_in', $record);
+}
+
+/**
+ * Save the Opt-in record.
+ *
+ * @param $node
+ * @param $submission
+ */
+function springboard_advocacy_get_opt_in_uid($node, $submission) {
+  $opt_in = db_query('SELECT * FROM {webform_component} ' .
+    'WHERE nid = :nid ' .
+    'AND form_key = :form_key',
+    array(
+      ':nid' => $node->nid,
+      ':form_key' => 'sbp_sba_action_optin'
+    ))->fetchObject();
+  if (!empty($opt_in->cid) && !empty($submission->data[$opt_in->cid]['value'][0])) {
+    $sid = $submission->sid;
+    $result = db_query('SELECT uid FROM {webform_submissions} WHERE sid = :sid', array(':sid' => $sid));
+    $uid = $result->fetchField();
+    springboard_advocacy_log_opt_in($node->nid, $uid, TRUE, $sid);
+  }
+}
+
+/**
+ * Implements hook_webform_submission_delete().
+ *
+ * Delete recent signers record if the submission is deleted.
+ */
+function springboard_advocacy_webform_submission_delete($node, $submission) {
+  db_delete('springboard_action_opt_in')
+    ->condition('sid', $submission->sid, '=')
+    ->execute();
+}
+

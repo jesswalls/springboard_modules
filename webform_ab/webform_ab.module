@@ -141,6 +141,16 @@ function webform_ab_menu() {
 }
 
 /**
+ * Implements hook_views_api().
+ */
+function webform_ab_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'webform_ab') . '/views',
+  );
+}
+
+/**
  * Check if the current user can view the reports on a given Webform A/B Test
  */
 function webform_ab_can_view_reports($node) {

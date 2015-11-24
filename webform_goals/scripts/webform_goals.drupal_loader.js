@@ -1,7 +1,7 @@
 (function ($) {
    Drupal.behaviors.webform_goals = {
     attach: function (context, settings) {
-    var ids = [];
+        var ids = [];
     items = jQuery('.wg-goal').map(function(){
       jQuery(this).hide();
       ids.push(jQuery(this).data('gid'));
@@ -25,9 +25,10 @@
         //         - token (eg. [webform_goal:progress-raw]) => token replacement value (eg 11)
         for (i = 0; i < ids.length; ++i) {
           jQuery(".wg-goal").each(function() {
-           if (jQuery(this).data('gid') === ids[i]) {
-             if (jQuery(this).is(':empty') || jQuery(this).html() === "\n") {
-               // embed widget mode
+
+              if (jQuery(this).data('gid') === ids[i]) {
+                  if (jQuery(this).is(':empty') || jQuery(this).html() === "\n" || jQuery(this).html() === "&nbsp;") {
+                 // embed widget mode
                jQuery(this).html(data[ids[i]].markup);
              }
              else {

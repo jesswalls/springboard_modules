@@ -1,3 +1,11 @@
 .autocomplete_extra_wide input {
   min-width: 600px !important;
 }
+
+.form-item-submitted-tickets-ticket-box-fundraiser-tickets-extra-donation .currency-symbol {
+  float: left;
+  width: 20px;
+}
+table.ticket_box #fundraiser-tickets-total-quant {
+  text-align: left;
+}

@@ -73,7 +73,7 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
     case 'actions':
 
       // Actions.
-      $actions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_1', array('sba_message_action'));
+      $actions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_3', array('sba_message_action'));
       if ($actions_view && !empty($actions_view->result)) {
         $sections = array(
           'sba_actions' => array(
@@ -103,7 +103,7 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
 
     // All message actions view page.
     case 'message-actions/all':
-      $actions_all_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_2', array('sba_message_action'));
+      $actions_all_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_4', array('sba_message_action'));
       if (!$actions_all_view) {
         $sections = springboard_advocacy_dashboard_error('sba_actions', t('All Message Actions'), t('Message Actions view or view display "block_2" not found.'));
         break;
@@ -182,9 +182,10 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
           $message = array_pop($messages);
           $subject_editable = field_get_items('sba_message', $message, 'field_sba_subject_editable');
           $user_editable = field_get_items('sba_message', $message, 'field_sba_user_editable');
-          if ($subject_editable[0]['value'] != 'Not editable' || !empty($user_editable)) {
+          $multi_flow = field_get_items('node', $node, 'field_sba_action_flow');
+          if ($multi_flow[0]['value'] != 'multi' && ($subject_editable[0]['value'] != 'Not editable' || !empty($user_editable))) {
             $no_create = TRUE;
-            drupal_set_message(t("This action's current message is user-editable, additional messages may not be created for this action until user editing is disabled."), 'warning', FALSE);
+            drupal_set_message(t("This single-step action's current message is user-editable, please disable user editing or use the multi-step action flow to create additional messages."), 'error', FALSE);
           }
         }
       }

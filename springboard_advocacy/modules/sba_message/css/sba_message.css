@@ -863,6 +863,7 @@
 
 #advo-error-wrapper {
     display:none;
+    margin-top:1em;
 }
 #advo-error-wrapper, div.view-empty {
     border-radius: 4px;

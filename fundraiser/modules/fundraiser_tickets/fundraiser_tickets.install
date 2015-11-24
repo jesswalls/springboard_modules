@@ -57,3 +57,13 @@ function fundraiser_tickets_update_7001() {
 
   return 'Added table fundraiser_tickets_add_on_donations.';
 }
+
+/**
+ * Assign the delete ticket permission to the Springboard admin role.
+ */
+function fundraiser_tickets_update_7002() {
+  $sb_admin_role = user_role_load_by_name('Springboard administrator');
+  if ($sb_admin_role) {
+    user_role_grant_permissions($sb_admin_role->rid, array('allow node-specific ticket deletion'));
+  }
+}

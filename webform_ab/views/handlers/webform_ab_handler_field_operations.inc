@@ -3,7 +3,7 @@
 /**
  * Field handler to show a Webform A/B Test's links
  */
-class webform_ab_views_handler_field_operations extends views_handler_field {
+class webform_ab_handler_field_operations extends views_handler_field {
   function construct() {
     parent::construct();
 
@@ -57,8 +57,8 @@ class webform_ab_views_handler_field_operations extends views_handler_field {
         }
       }
       
-      drupal_add_css(drupal_get_path('module', 'webform_ab_views') . '/css/webform_ab_views.css');
-      return theme('links', array('links' => $links, 'attributes' => array('class' => array('webform_ab_views', 'links', 'inline', 'operations'))));
+      drupal_add_css(drupal_get_path('module', 'webform_ab') . '/css/webform_ab.css');
+      return theme('links', array('links' => $links, 'attributes' => array('class' => array('webform_ab', 'links', 'inline', 'operations'))));
     }
   }
 }

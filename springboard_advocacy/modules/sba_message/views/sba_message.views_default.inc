@@ -983,8 +983,8 @@ function sba_message_views_default_views() {
     'sba_message_action_message' => 'sba_message_action_message',
   );
 
-  /* Display: Embedded node/%/messages Block */
-  $handler = $view->new_display('block', 'Embedded node/%/messages Block', 'block_1');
+  /* Display: Node Messages Tab */
+  $handler = $view->new_display('block', 'Node Messages Tab', 'block_1');
   $handler->display->display_options['display_description'] = 'Embedded block for edit page';
   $handler->display->display_options['defaults']['use_ajax'] = FALSE;
   $handler->display->display_options['defaults']['style_plugin'] = FALSE;
@@ -1074,15 +1074,13 @@ function sba_message_views_default_views() {
   $handler->display->display_options['sorts']['weight']['draggableviews_setting_view'] = 'self';
   $handler->display->display_options['sorts']['weight']['draggableviews_setting_new_items_bottom_list'] = 0;
 
-  /* Display: Block 2 */
-  $handler = $view->new_display('block', 'Block 2', 'block_2');
+  /* Display: Multi-Message Modal */
+  $handler = $view->new_display('block', 'Multi-Message Modal', 'block_2');
   $handler->display->display_options['defaults']['use_ajax'] = FALSE;
   $handler->display->display_options['use_ajax'] = TRUE;
   $handler->display->display_options['defaults']['pager'] = FALSE;
-  $handler->display->display_options['pager']['type'] = 'mini';
-  $handler->display->display_options['pager']['options']['items_per_page'] = '1';
+  $handler->display->display_options['pager']['type'] = 'none';
   $handler->display->display_options['pager']['options']['offset'] = '0';
-  $handler->display->display_options['pager']['options']['id'] = '0';
   $handler->display->display_options['defaults']['style_plugin'] = FALSE;
   $handler->display->display_options['style_plugin'] = 'default';
   $handler->display->display_options['defaults']['style_options'] = FALSE;
@@ -1094,20 +1092,23 @@ function sba_message_views_default_views() {
   $handler->display->display_options['fields']['field_sba_subject']['id'] = 'field_sba_subject';
   $handler->display->display_options['fields']['field_sba_subject']['table'] = 'field_data_field_sba_subject';
   $handler->display->display_options['fields']['field_sba_subject']['field'] = 'field_sba_subject';
-  $handler->display->display_options['fields']['field_sba_subject']['label'] = 'Subject';
+  $handler->display->display_options['fields']['field_sba_subject']['label'] = '';
+  $handler->display->display_options['fields']['field_sba_subject']['element_type'] = 'h4';
   $handler->display->display_options['fields']['field_sba_subject']['element_label_colon'] = FALSE;
   $handler->display->display_options['fields']['field_sba_subject']['delta_offset'] = '0';
   /* Field: SBA Message: Placeholder Greeting (for display on the action) */
   $handler->display->display_options['fields']['field_sba_placeholder_greeting']['id'] = 'field_sba_placeholder_greeting';
   $handler->display->display_options['fields']['field_sba_placeholder_greeting']['table'] = 'field_data_field_sba_placeholder_greeting';
   $handler->display->display_options['fields']['field_sba_placeholder_greeting']['field'] = 'field_sba_placeholder_greeting';
-  $handler->display->display_options['fields']['field_sba_placeholder_greeting']['label'] = 'Greeting';
+  $handler->display->display_options['fields']['field_sba_placeholder_greeting']['label'] = '';
   $handler->display->display_options['fields']['field_sba_placeholder_greeting']['element_label_colon'] = FALSE;
   $handler->display->display_options['fields']['field_sba_placeholder_greeting']['hide_empty'] = TRUE;
   /* Field: SBA Message: Message/Intro */
   $handler->display->display_options['fields']['field_sba_message']['id'] = 'field_sba_message';
   $handler->display->display_options['fields']['field_sba_message']['table'] = 'field_data_field_sba_message';
   $handler->display->display_options['fields']['field_sba_message']['field'] = 'field_sba_message';
+  $handler->display->display_options['fields']['field_sba_message']['label'] = '';
+  $handler->display->display_options['fields']['field_sba_message']['element_label_colon'] = FALSE;
   $handler->display->display_options['defaults']['sorts'] = FALSE;
   /* Sort criterion: Draggableviews: Weight */
   $handler->display->display_options['sorts']['weight']['id'] = 'weight';

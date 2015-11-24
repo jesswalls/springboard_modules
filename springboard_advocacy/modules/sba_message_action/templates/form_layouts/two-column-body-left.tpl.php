@@ -22,7 +22,7 @@
         <?php if(!empty($quicksign)): ?>
           <div id="quicksign-container"><?php print $quicksign ?></div>
         <?php endif; ?>
-        <?php if(!empty($participants)): ?>
+        <?php if(!empty($participants)  && $show_participants_block): ?>
           <div id="participants-container">
             <h4 >Recent participants</h4>
             <?php print $participants ?>

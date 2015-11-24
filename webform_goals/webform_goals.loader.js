@@ -63,7 +63,7 @@
                         for (i = 0; i < ids.length; ++i) {
                             jQuery(".wg-goal").each(function() {
                                 if (jQuery(this).data('gid') === ids[i]) {
-                                    if (jQuery(this).is(':empty') || jQuery(this).html() === "\n") {
+                                    if (jQuery(this).is(':empty') || jQuery(this).html() === "\n" || jQuery(this).html() === "&nbsp;") {
                                         // embed widget mode
                                         jQuery(this).html(data[ids[i]].markup);
                                     }

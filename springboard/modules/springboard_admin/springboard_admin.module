@@ -943,6 +943,17 @@ function springboard_admin_springboard_admin_alias_patterns() {
         'replacement' => FALSE,  // don't redirect node/123 to anything, even for Admin UI users
       ),
     ),
+    // Upsell preview.
+    'node/%/fundraiser_upsell_preview' => array(
+      'path' => array(
+        'regex' => '|^/node/([0-9]+)/fundraiser_upsell(.*)$|',
+        'replacement' => 'node/$1/fundriaser_upsell$2',
+      ),
+      'alias' => array(
+        'regex' => '|^springboard/node/([0-9]+)/fundraiser_upsell(.*)$|',
+        'replacement' => FALSE,
+      ),
+    ),
     // Webform A/B Associated Webforms page.
     'node/%/webforms' => array(
       'path' => array(

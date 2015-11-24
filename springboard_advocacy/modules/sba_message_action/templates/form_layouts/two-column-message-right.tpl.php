@@ -44,7 +44,7 @@
         <?php if(!empty($quicksign)): ?>
           <div id="quicksign-container" class="span7"><?php print $quicksign ?></div>
         <?php endif; ?>
-        <?php if(!empty($participants)): ?>
+        <?php if(!empty($participants) && $show_participants_block): ?>
           <div id="participants-container" class = "span7">
             <h4>Recent participants</h4>
             <?php print $participants ?>

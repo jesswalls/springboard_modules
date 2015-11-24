@@ -30,11 +30,11 @@ function fundraiser_webform_webform_goals_list_metrics($selected_context, $form_
           ),
           'seed' => array(
             'title' => t('Seed goal progress with this amount'),
-            'description' => t('Add this number to the current total donations when calculating goal progress.'),
+            'description' => t('Add this number to the current total donation amount when calculating goal progress.'),
           ),
           'display_threshold' => array(
-            'title' => t('Minimum total donations required to show progress'),
-            'description' => t('The goal progress bar will be hidden until total donations reach this number.'),
+            'title' => t('Minimum total donation amount required to show progress'),
+            'description' => t('The goal progress bar will be hidden until total donations reach this amount.'),
           ),
         ),
       );

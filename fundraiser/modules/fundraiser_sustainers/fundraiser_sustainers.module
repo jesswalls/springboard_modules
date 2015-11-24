@@ -1260,6 +1260,26 @@ function fundraiser_sustainers_form_fundraiser_admin_settings_alter(&$form, &$fo
     '#default_value' => variable_get('fundraiser_sustainers_create_series_cron', 0),
   );
 
+  // Auto-cancel options for sustainers whose payment are consistently declined.
+  $form['fundraiser_sustainers']['fundraiser_recurring_auto_cancel'] = array (
+   '#type' => 'fieldset',
+    '#title' => t('Recurring Series Auto-Cancellation'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+  $form['fundraiser_sustainers']['fundraiser_recurring_auto_cancel']['fundraiser_recurring_autocancel_enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Cancel recurring donation series after multiple consecutive permanent failures?'),
+    '#description' => t('If this option is enabled, recurring donation series which consistently fail will be permanently cancelled.'),
+    '#default_value' => variable_get('fundraiser_recurring_autocancel_enabled', 0),
+  );
+  $form['fundraiser_sustainers']['fundraiser_recurring_auto_cancel']['fundraiser_recurring_autocancel_threshold'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Minimum consecutive failures'),
+    '#description' => t('How many consecutive donation failures after which a permanent cancellation should occur. Please enter a value greater than 3.'),
+    '#default_value' => variable_get('fundraiser_recurring_autocancel_threshold', 3),
+  );
+
   // CC expiration message to send when sustainer donation is almost out.
   $form['fundraiser_sustainers']['fundraiser_cc_expiration_message'] = array(
     '#type' => 'fieldset',
@@ -1307,12 +1327,23 @@ function fundraiser_sustainers_form_fundraiser_admin_settings_alter(&$form, &$fo
  */
 function fundraiser_sustainers_settings_form_validate($form, &$form_state) {
   $max_processing_attempts = $form_state['values']['fundraiser_sustainers_max_processing_attempts'];
+  $min_autocancel_threshold = $form_state['values']['fundraiser_recurring_autocancel_threshold'];
 
-  // Ensure we get a number between 3 and 10.
-  if (!is_numeric($max_processing_attempts)
+  // Ensure we get a number between 3 and 10 for charge attempts.
+  if (
+    !is_numeric($max_processing_attempts)
     || $max_processing_attempts < 3
-    || $max_processing_attempts > 10) {
+    || $max_processing_attempts > 10
+  ) {
     form_set_error('fundraiser_sustainers_max_processing_attempts', t('Maximum charge attempts should be a valid number between 3 and 10.'));
+  }
+
+  // Ensure we get a number above 3 for autocancel threshold.
+  if (
+    !is_numeric($min_autocancel_threshold)
+    || $min_autocancel_threshold < 3
+  ) {
+    form_set_error('fundraiser_recurring_autocancel_consecutive_failures', t('Minimum consecutive failures should be a valid number greater than 3.'));
   }
 }
 
@@ -2031,6 +2062,18 @@ function fundraiser_sustainers_update_billing_info_create_new_donations($master_
   // parentage with the new billing.
   $master_donation->donation = array_merge($master_donation->donation, $submission_fields);
 
+  // If the source donation was charged on a different day to the master
+  // donation, update the next charge date to reflect that.
+  $master_date = new DateTime();
+  $master_date->setTimestamp($master_donation->recurring->next_charge);
+  $source_day = date('d', $source_donation->recurring->next_charge);
+
+  if ($master_date->format('d') != $source_day) {
+    $master_date->setDate($master_date->format('Y'), $master_date->format('m'), $source_day);
+  }
+
+  $next_charge = $master_date->getTimestamp();
+
   // Create new orders based on expiration date as needed.
   // But we need to retrieve the month / year values from gateway form.
   if (isset($master_donation->gateway)) {
@@ -2040,7 +2083,7 @@ function fundraiser_sustainers_update_billing_info_create_new_donations($master_
       // updated amounts we get the right one.
       $master_donation->donation['amount'] = $source_donation->donation['amount'];
       // Create new orders.
-      _fundraiser_sustainers_create_future_orders($master_donation, $expires['month'], $expires['year'], $source_donation, $master_donation->recurring->next_charge);
+      _fundraiser_sustainers_create_future_orders($master_donation, $expires['month'], $expires['year'], $source_donation, $next_charge);
     }
 
     // If a custom charge date was set by an admin, update the charge dates.
@@ -2580,15 +2623,91 @@ function fundraiser_sustainers_fundraiser_donation_cancel($donation) {
   if (!empty($donation->recurring->cancellation_reason)) {
     $reason = $donation->recurring->cancellation_reason;
   }
+  $canceled = isset($donation->recurring->auto_canceled) ? 'auto_canceled' : 'canceled';
 
   $recurring = array(
     'did' => $donation->did,
-    'gateway_resp' => 'canceled',
+    'gateway_resp' => $canceled,
     'lock_id' => 0,
     'cancellation_reason' => $reason,
   );
   _fundraiser_sustainers_update_recurring($recurring);
 
+}
+
+/**
+<<<<<<< HEAD
+ * Implements hook_fundraiser_sustainers_donation_fail().
+ */
+function fundraiser_sustainers_fundraiser_sustainers_donation_fail($donation) {
+  // Do not procede if admin setting for auto-cancel is not enabled.
+  if (!variable_get('fundraiser_recurring_autocancel_enabled', NULL)) {
+    return;
+  }
+  // Query the sustainer log to see how many consecutive failures we have.
+  $threshold = variable_get('fundraiser_recurring_autocancel_threshold', 3);
+  // This hook function is called when we have a current donation which failed, so we can subtract 1.
+  --$threshold;
+  $records = db_query_range('
+    SELECT * FROM 
+      {fundraiser_sustainers}
+    WHERE 
+      master_did = :master_did
+    AND
+      did < :did
+    ORDER BY
+      did DESC', 0, $threshold,
+    array(':did' => $donation->did, ':master_did' => $donation->master_did)
+  );
+
+  // Confirm that all our most recent consecutive sustainers failed.
+  foreach ($records as $result) {
+    $response[] = $result->gateway_resp;
+  }
+  // If all gateways responses were failed, then proceed with auto cancel of donation.
+  if (array_unique($response) === array(FUNDRAISER_SUSTAINERS_FAILED_STATUS)) {
+    fundraiser_sustainers_auto_cancel($donation);
+  }
+}
+
+/**
+ * Cancel a recurring donation series.
+ *
+ * @param $donation
+ *   The donation object.
+ */
+function fundraiser_sustainers_auto_cancel($donation) {
+  $master_did = $donation->master_did;
+  $now = time();
+  $threshold = variable_get('fundraiser_recurring_autocancel_threshold', 3);
+  $reason = t('Automatically canceled on @date because of @num successive failures', array('@date' => format_date($now), '@num' => $threshold));
+  // Cancel the donations.
+  $sustainer_donations = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
+  foreach ($sustainer_donations as $sustainer_donation) {
+    $donation = fundraiser_donation_get_donation($sustainer_donation->did);
+
+    // Add the cancel reason to the donation's recurring object.
+    $donation->recurring->cancellation_reason = $reason;
+
+    // Flag the donation as auto_canceled.
+    $donation->recurring->auto_canceled = 'auto_canceled';
+
+    // Cancel the donation.
+    // @see fundraiser_sustainers_fundraiser_donation_cancel().
+    fundraiser_donation_cancel($donation);
+
+    // Add a watchdog entry with the did and reason.
+    watchdog('fundraiser_sustainers', 'Donation cancelled for #@did. Reason: @reason',
+      array('@did' => $donation->did, '@reason' => $reason));
+  }
+
+  // Invoke a rules event on auto cancellations.
+  if (module_exists("rules")) {
+    rules_invoke_event("fundraiser_sustainers_auto_cancel", $donation);
+  }
+  else {
+    module_invoke_all('fundraiser_sustainers_auto_cancel', $donation);
+  }
 }
 
 /**
@@ -3379,3 +3498,4 @@ function fundraiser_sustainers_unlock_sustainer_action(&$sustainer_record, $cont
   }
 
 }
+

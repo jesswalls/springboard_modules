@@ -60,12 +60,16 @@ function sba_message_access($op, $sba_message = NULL, $account = NULL) {
         $messages = entity_load('sba_message', $node->message_ids);
         if (count($messages) == 1) {
           $message = array_pop($messages);
-          $subject_editable = field_get_items('sba_message', $message, 'field_sba_subject_editable');
-          $user_editable = field_get_items('sba_message', $message, 'field_sba_user_editable');
-          if ($subject_editable[0]['value'] != 'Not editable' || !empty($user_editable)) {
-            $loglink = l(t("Return to message admin."), 'springboard/node/' . $node->nid . '/messages');
-            drupal_set_message(t("This action's current message is user-editable, additional messages may not be created for this action until user editing is disabled. !link", array('!link' => $loglink)), 'error', FALSE);
-            return FALSE;
+          $node_wrapper = entity_metadata_wrapper('node', $node);
+          if ($node_wrapper->__isset('field_sba_action_flow')) {
+            $multi_flow = $node_wrapper->field_sba_action_flow->value() == 'multi' ? TRUE : FALSE;
+            $subject_editable = field_get_items('sba_message', $message, 'field_sba_subject_editable');
+            $user_editable = field_get_items('sba_message', $message, 'field_sba_user_editable');
+            if (!$multi_flow && ($subject_editable[0]['value'] != 'Not editable' || !empty($user_editable))) {
+              $loglink = l(t("Return to message admin."), 'springboard/node/' . $node->nid . '/messages');
+              drupal_set_message(t("This action's current message is user-editable, additional messages may not be created for this action until user editing is disabled. !link", array('!link' => $loglink)), 'error', FALSE);
+              return FALSE;
+            }
           }
         }
       }
@@ -160,11 +164,7 @@ function sba_message_form_views_form_sba_messages_node_block_1_alter(&$form, &$f
       '#weight' => 99,
       '#title' => t('Use message order.'),
       '#default_value' => $val,
-      '#description' => t("Check this box if you wish to enforce message ' .
-        'precedence by sort order. If you check this box, only the first message ' .
-        'that is eligible  for delivery to elected officials - via the user's zip ' .
-        'code/congressional district verification - will be sent. ' .
-        'The subsequent messages will be ignored."),
+      '#description' => t("Check this box if you wish to enforce message precedence by sort order. If you check this box, only the first message that is eligible  for delivery to elected officials - via the user's zip code/congressional district verification - will be sent. The subsequent messages will be ignored."),
     );
     $form['actions']['submit']['#submit'][] = 'sba_message_drag_submit';
   }
@@ -236,7 +236,7 @@ function _sba_message_committee_autocomplete($name, $state, $chamber) {
   $matches = array();
 
   // Retrieve committee list from cache or via API call if not cached.
-  $api_call = new AdvocacyApiCall();
+  $api_call = springboard_advocacy_api_call();
   $committee_list = $api_call->getCommittees();
 
   // Grep the results using patterns based on form input.

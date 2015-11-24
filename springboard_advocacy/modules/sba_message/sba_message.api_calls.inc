@@ -59,7 +59,7 @@ function _sba_message_api_save($sba_message, $is_new, $form_state) {
   $combined = array_merge($multi_indvds, $indvds, $gender_or_social_rows);
   $indvds = !empty($combined) ? json_encode($combined) : '';
 
-  $api_call = new AdvocacyApiCall();
+  $api_call = springboard_advocacy_api_call();
 
   // Is this a new message? Then create a new target group for it.
   if ($is_new) {
@@ -105,7 +105,7 @@ function _sba_message_api_save($sba_message, $is_new, $form_state) {
  */
 function _sba_message_api_get_gender_or_social_ids($target_fields) {
 
-  $api_call = new AdvocacyApiCall();
+  $api_call = springboard_advocacy_api_call();
 
   $ids = array();
   foreach ($target_fields as $fields) {
@@ -316,7 +316,7 @@ function _sba_message_api_valid_response($sba_message, $response) {
 function _sba_message_api_delete_target_group ($sba_message) {
   //delete the remote API message group.
 
-  $api_call = new AdvocacyApiCall();
+  $api_call = springboard_advocacy_api_call();
   $response = $api_call->invokeClientMethod('deleteTargetGroup', $sba_message->data['group_id']);
 
   if (isset($response->data)) {

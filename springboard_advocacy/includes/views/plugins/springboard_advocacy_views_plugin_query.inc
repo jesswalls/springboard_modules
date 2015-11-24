@@ -24,7 +24,7 @@ class springboard_advocacy_views_plugin_query extends views_plugin_query {
    */
   function init($base_table, $base_field, $options) {
     parent::init($base_table, $base_field, $options);
-    $this->apiCall = new AdvocacyApiCall();
+    $this->apiCall = springboard_advocacy_api_call();
   }
 
   /**

@@ -43,7 +43,10 @@ function sba_message_action_send_message(array $user_message, array $form_state)
       'contact' => $contact,
       'form_id' => $values['advocacy_id'],
       'messages' => $message_build,
+      'message_edited' => $webform_values['sba_user_edit_flag'],
     );
+
+    // Check the test mode and multiflow parameters.
     $node = $form_state['complete form']['#node'];
     $test_mode = field_get_items('node', $node, 'field_sba_test_mode');
     if (!empty($test_mode[0]['value']) && $test_mode[0]['value'] == 1) {
@@ -51,9 +54,12 @@ function sba_message_action_send_message(array $user_message, array $form_state)
       $submission['test_mode'] = TRUE;
       $submission['test_email'] = !empty($test_email[0]['safe_value']) ? $test_email[0]['safe_value'] : '';
     }
-
+    $multi_flow = field_get_items('node', $node, 'field_sba_action_flow');
+    if (!empty($multi_flow[0]['value']) && $multi_flow[0]['value'] == 'multi') {
+      $submission['multiflow'] = 'step_one';
+    }
     // Send submission to API Client.
-    $api_call = new AdvocacyApiCall();
+    $api_call = springboard_advocacy_api_call();
     $response = $api_call->invokeClientMethod('resolveTargets', $submission);
     if (isset($response->data)) {
       // We got a valid response, build the confirmation message array.
@@ -168,6 +174,7 @@ function sba_message_action_build_contact(array $values, $zip, array $geo) {
 
   $line_2 = !empty($values['sbp_address_line_2']) ? $values['sbp_address_line_2'] . "\n " : '';
   $contact = array(
+    'salutation' => $values['sbp_salutation'],
     'first_name' => $values['sbp_first_name'],
     'last_name' => $values['sbp_last_name'],
     'address' => $values['sbp_address'],
@@ -183,7 +190,6 @@ function sba_message_action_build_contact(array $values, $zip, array $geo) {
     'latitude' => isset($geo['latitude']) ? $geo['latitude'] : '',
     'longitude' => isset($geo['longitude']) ? $geo['longitude'] : '',
   );
-
   return $contact;
 }
 
@@ -198,8 +204,20 @@ function sba_message_action_build_contact(array $values, $zip, array $geo) {
  */
 function sba_message_action_set_confirmation_session_vars($response, $contact) {
   if (!empty($response->messages)) {
+
     $_SESSION['delivered_messages'] = array();
     $_SESSION['undelivered_messages'] = array();
+    $_SESSION['contact'] = $contact;
+    // Needed for step-two forms.
+    $_SESSION['form_details'] = array(
+      'action_id' => isset($response->alert_id) ? $response->alert_id: '',
+      'account_id' => isset($response->account_id) ? $response->account_id : '',
+    );
+    if(isset($response->test_mode)) {
+      $_SESSION['form_details']['test_mode'] = $response->test_mode;
+      $_SESSION['form_details']['test_email'] = $response->test_email;
+    }
+
     $status = sba_message_action_get_message_statuses($response);
     unset($status['success']['target_count']);
     if (!empty($status['success'])) {
@@ -214,38 +232,44 @@ function sba_message_action_set_confirmation_session_vars($response, $contact) {
           $messages[$x]['subject'] = $status['success'][$id]['subject'];
           $messages[$x]['body'] = $status['success'][$id]['body'];
           $messages[$x]['targets'] = $message['targets'][$key];
+          // Needed for step-two forms.
+          $messages[$x]['message_id'] = $id;
+          $messages[$x]['precedence'] = $status['success'][$id]['precedence'];
           $x++;
         }
       }
+
       $_SESSION['delivered_messages'] =
         array(
           'messages' => $messages,
-          'contact' => $contact,
           'target_count' => $count_targets,
           'message_count' => $count_messages,
-
-      );
+        );
     }
 
     unset($status['hold']['target_count']);
     $messages = array();
+    $y = 0;
     if (!empty($status['hold'])) {
       foreach ($status['hold'] as $id => $message) {
         foreach ($message['people'] as $key => $person) {
-          $messages[$id]['people'][] = $person;
-          $messages[$id]['message'] = $status['hold'][$id]['body'];
-          $messages[$id]['subject'] = $status['hold'][$id]['subject'];
-          $messages[$id]['targets'] = $message['targets'];
+          $messages[$y]['person'] = $person;
+          $messages[$y]['body'] = $status['hold'][$id]['body'];
+          $messages[$y]['subject'] = $status['hold'][$id]['subject'];
+          $messages[$y]['targets'] = $message['targets'][$key];
+          $messages[$y]['message_id'] = $id;
+          $messages[$y]['precedence'] = $status['hold'][$id]['precedence'];
+          $messages[$y]['hold'] = TRUE;
+          $y++;
         };
       }
       $_SESSION['undelivered_messages'] =
         array(
           'messages' => $messages,
-          'contact' => $contact,
           'targets' => '',
         );
-      }
     }
+  }
 }
 
 /**
@@ -263,13 +287,8 @@ function sba_message_action_preprocess_webform_confirmations_delivered(&$vars) {
   $targets = array();
   foreach ($vars['messages'] as $key => $message) {
 
-    // Put the party in parens.
-    if(isset($message['person']['party'])) {
-      $message['person']['party'] = '(' . $message['person']['party'] . ')';
-    }
-
     // Format the contact for token replacement.
-    $contact = (object) $vars['contact'];
+    $contact = (object) $_SESSION['contact'];
     // Replace the tokens
     $message['body'] = token_replace($message['body'], array('sba_contact' => $contact, 'sba_target' => $message['targets'],));
     //In case it comes back encoded,
@@ -283,8 +302,7 @@ function sba_message_action_preprocess_webform_confirmations_delivered(&$vars) {
     $link = l($subject, '#', array('attributes' => array('onclick' => $on_click)));
     // Prepare the recipients for display in a bulleted list.
     unset($message['person']['url']);
-
-    $targets[$key]['person'] = implode(' ', $message['person']);
+    $targets[$key]['person'] = theme('sba_message_action_person_details', $message['person']);
     $targets[$key]['link'] =  $link;
   }
 
@@ -322,27 +340,28 @@ function sba_message_action_preprocess_webform_confirmations_undelivered(&$vars)
   $count_output = '';
 
   foreach ($messages as $id => $message) {
-    foreach ($message['people'] as $key => $person) {
-      // Stores the segments of the target
-      $target_info = array();
-      $target_count++;
-      if (!empty($person['url'])) {
-        $on_click = "var extWrapper=window.open(this.href,'targetWindow','toolbar=no,scrollbars=yes,status=no,menubar=no,resizable=yes,top=0,left=0,width=1024,height=800');extWrapper.focus();return false;";
-        $link = l($person['name'], check_plain($person['url']), array('attributes' => array('onclick' => $on_click)));
-        $target_info[] = t('!name', array('!name' => $link)) . ' (' . $person['party'] . ') ' . $person['district'];
-      } else {
-        $target_info[] = $person['name'].' ('.$person['party'].') '.$person['district'];
-      }
-      // Prepare the contact object so we can replace tokens in the message.
-      $contact = (object) $vars['contact'];
-      $message['message'] = token_replace($message['message'], array('sba_contact' => $contact, 'sba_target' => $message['targets'][$key],));
-      // The recipient.
-      $messages_out[$id][$key]['target'] = implode(' ', $target_info);
-      // Make sure we're not double encoding in case
-      // it comes back from API server encoded.
-      $messages_out[$id][$key]['subject'] =   check_plain(decode_entities($message['subject']));
-      $messages_out[$id][$key]['message'] = check_markup($message['message'], 'filtered_html');
+    // Stores the segments of the target
+    $person = $message['person'];
+    $target_info = array();
+    $target_count++;
+    if (!empty($person['url'])) {
+      $on_click = "var extWrapper=window.open(this.href,'targetWindow','toolbar=no,scrollbars=yes,status=no,menubar=no,resizable=yes,top=0,left=0,width=1024,height=800');extWrapper.focus();return false;";
+      $name_with_webform_url = l($person['name'], check_plain($person['url']), array('attributes' => array('onclick' => $on_click)));
+      $person['name_with_webform_url'] = $name_with_webform_url;
     }
+
+    $target_info[] = theme('sba_message_action_person_details', $person);
+
+    // Prepare the contact object so we can replace tokens in the message.
+    $contact = (object) $_SESSION['contact'];
+
+    $message['message'] = token_replace($message['body'], array('sba_contact' => $contact, 'sba_target' => $message['targets'],));
+    // The recipient.
+    $messages_out[$id]['target'] = implode(' ', $target_info);
+    // Make sure we're not double encoding in case
+    // it comes back from API server encoded.
+    $messages_out[$id]['subject'] =   check_plain(decode_entities($message['subject']));
+    $messages_out[$id]['message'] = check_markup($message['message'], 'filtered_html');
   }
 
   $message_plural = format_plural($message_count, 'message', 'messages');
@@ -350,14 +369,14 @@ function sba_message_action_preprocess_webform_confirmations_undelivered(&$vars)
 
   if ($message_count) {
     $count_output .= t(
-        "We were unable to deliver @message_count @messages to @target_count @targets. Please visit the decision-maker's website to submit your message directly.",
-        array(
-          '@message_count' => $message_count,
-          '@messages' => $message_plural,
-          '@target_count' => $target_count,
-          '@targets' => $target_plural,
-        )
-      );
+      "We were unable to deliver @message_count @messages to @target_count @targets. Please visit the decision-maker's website to submit your message directly.",
+      array(
+        '@message_count' => $message_count,
+        '@messages' => $message_plural,
+        '@target_count' => $target_count,
+        '@targets' => $target_plural,
+      )
+    );
   }
   else {
     $count_output .= t('You have no undeliverable messages.');
@@ -370,9 +389,7 @@ function sba_message_action_preprocess_webform_confirmations_undelivered(&$vars)
   $vars['show_message_text'] = t('Show message');
   $vars['messages_out'] = array();
   foreach ($messages_out as $key => $message) {
-    foreach($message as $recipient) {
-      $vars['messages_out'][] = $recipient;
-    }
+    $vars['messages_out'][] = $message;
   }
 }
 
@@ -405,15 +422,19 @@ function sba_message_action_get_message_statuses($response) {
       $messages[$id]['deliverable'] = $message->deliverable;
       $messages[$id]['subject'] = $message->message->subject;
       $messages[$id]['body'] = $message->message->body;
+      $messages[$id]['precedence'] = $message->message->precedence;
     }
   }
 
   foreach ($messages as $id => $message) {
     foreach ($messages[$id]['deliverable'] as $target) {
+
       // Filter the largish target object in the response down to
       // a few select properties, in an array
       $target_details = sba_message_action_get_target_details($target);
       // Split into success and hold arrays.
+      unset($target->addresses);
+      $tokens = array('primary_delivery_method' => $target->primary_delivery_method, 'id' => $target->id, 'salutation' => $target->salutation, 'first_name' => $target->first_name, 'last_name' => $target->last_name);
       if (empty($target->webform_status)
         || (!empty($target->webform_status) && $target->webform_status != 'Hold')) {
         $success_count++;
@@ -421,7 +442,9 @@ function sba_message_action_get_message_statuses($response) {
         $message_success[$id]['people'][] = $target_details;
         $message_success[$id]['subject'] = $messages[$id]['subject'];
         $message_success[$id]['body'] = $messages[$id]['body'];
-        $message_success[$id]['targets'][] = $target;
+        $message_success[$id]['targets'][] = (Object) $tokens;
+        $message_success[$id]['precedence'] = $messages[$id]['precedence'];
+
       }
       else {
         $hold_count++;
@@ -429,7 +452,8 @@ function sba_message_action_get_message_statuses($response) {
         $message_hold[$id]['people'][] = $target_details;
         $message_hold[$id]['subject'] = $messages[$id]['subject'];
         $message_hold[$id]['body'] = $messages[$id]['body'];
-        $message_hold[$id]['targets'][] = $target;
+        $message_hold[$id]['targets'][] = (Object) $tokens;
+        $message_hold[$id]['precedence'] = $messages[$id]['precedence'];
       }
     }
   }
@@ -451,7 +475,6 @@ function sba_message_action_get_message_statuses($response) {
  *   An array containing a subset of target properties.
  */
 function sba_message_action_get_target_details($target) {
-
   $name = array();
   $target_details = array();
 
@@ -470,7 +493,7 @@ function sba_message_action_get_target_details($target) {
   if (!empty($target->party)) {
     $target_details['party'] = check_plain($target->party);
   }
-  if (!empty($target->state) && empty($target->district_name)) {
+  if (!empty($target->state)) {
     $target_details['state'] = check_plain($target->state);
   }
   if (!empty($target->district_name)) {
@@ -481,5 +504,34 @@ function sba_message_action_get_target_details($target) {
     $target_details['url'] = check_plain($target->webform_url);
   }
 
+  $target_details['organization'] = !empty($target->organization) ? check_plain($target->organization) : '';
+
+  if (!empty($target->title)) {
+    $target_details['title'] = check_plain($target->title);
+  }
+
   return $target_details;
+}
+
+function theme_sba_message_action_person_details(&$vars) {
+  $output = '';
+
+  $person = isset($vars['name_with_webform_url']) ? $vars['name_with_webform_url'] : $vars['name'];
+  $title = isset($vars['title']) ? $vars['title']  : '' ;
+  $party = isset($vars['party']) ? '(' . $vars['party'] . ')' : '';
+  $organization = !empty($vars['organization']) ? $vars['organization'] : '';
+  $separator = !empty($title) && !empty($organization) ? ', ' : ' ';
+
+  // Custom targets and executive branch.
+  $non_legislative_organization = !empty($organization)  ? $title . $separator . $organization : '';
+
+  // Legislators. Backward compatible with Target db structure pre-fall 2015 release;
+  $legislative_organization = isset($vars['district']) && !empty($title) ? $title . ', ' .  $vars['state'] . ' ' .  $party  : $organization . ' ' . $party ;
+
+  $affiliation = isset($vars['district'])  ? $legislative_organization : $non_legislative_organization;
+  $output .= $person;
+  if(!empty($affiliation)) {
+    $output .= ', ' . $affiliation;
+  }
+  return $output;
 }

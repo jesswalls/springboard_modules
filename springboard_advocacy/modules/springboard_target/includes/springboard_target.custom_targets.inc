@@ -32,7 +32,7 @@ function springboard_target_form($target_id = NULL) {
 
   // Load the target if Target ID is present.
   if (isset($target_id) && is_numeric($target_id)) {
-    $api_call = new AdvocacyApiCall();
+    $api_call = springboard_advocacy_api_call();
 
     $target = $api_call->invokeClientMethod('getCustomTarget', $target_id);
 
@@ -462,7 +462,7 @@ function springboard_target_delete($form, $form_state, $target_id) {
 function springboard_target_delete_submit(&$form, &$form_state) {
   $form_state['redirect'] = 'springboard/advocacy/targets/custom-targets';
 
-  $api_call = new AdvocacyApiCall();
+  $api_call = springboard_advocacy_api_call();
   $response = $api_call->invokeClientMethod('deleteCustomTarget', $form_state['values']['target_id']);
 
   if (isset($response->data)) {

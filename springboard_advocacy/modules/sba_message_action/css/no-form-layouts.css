@@ -38,7 +38,7 @@
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
-    padding-right: 20px;
+    padding-right: 0px;
 }
 
 #your-information-wrapper fieldset legend {
@@ -79,7 +79,7 @@
 }
 
 #your-information-wrapper #webform-component-sbp-salutation.control-group {
-    width: 20%;
+    width: 20.75%;
     float: left;
     clear:none;
     margin-top: 0;
@@ -186,4 +186,72 @@ form#sba-quicksign-form {
 
 #participants-container table {
     width: 100%;
+}
+
+
+@media (min-width: 768px) and (max-width: 979px) {
+
+    #your-information-wrapper  #webform-component-sbp-salutation.control-group {
+        width: 100%;
+        float: none;
+        clear:both;
+        margin-top: 0;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+    }
+
+
+    #your-information-wrapper  #webform-component-sbp-first-name.control-group,
+    #your-information-wrapper #webform-component-sbp-last-name.control-group {
+        float: none;
+        clear:both;
+        width: 100%;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        padding-left: 0;
+    }
+    #your-information-wrapper #webform-component-sbp-last-name.control-group input,
+    #your-information-wrapper #webform-component-sbp-first-name.control-group input {
+        width: 95%;
+    }
+
+}
+
+@media (max-width: 767px) {
+    #edit-actions {
+        width: auto;
+    }
+    #edit-actions input {
+        width: 100%;
+    }
+    .webform-client-form {
+        position: relative;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 979px) {
+    #webform-component-sbp-salutation.control-group {
+        width: 100%;
+        float: none;
+        clear:both;
+        margin-top: 0;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+    }
+
+
+    #webform-component-sbp-first-name.control-group,
+    #webform-component-sbp-last-name.control-group {
+        float: none;
+        clear:both;
+        width: 100%;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        padding-left: 0;
+    }
+
 }

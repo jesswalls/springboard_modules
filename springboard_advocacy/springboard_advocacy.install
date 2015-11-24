@@ -67,7 +67,72 @@ function springboard_advocacy_schema() {
     ),
     'primary key' => array('nid'),
   );
-    return $schema;
+  // Opt in tracking table.
+  $schema['springboard_action_opt_in'] = array(
+    'description' => 'Store action optin.',
+    'fields' => array(
+      'sid' => array(
+        'description' => 'Webform submission id.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'nid' => array(
+        'description' => 'Message action node id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'uid' => array(
+        'description' => 'Signer user id.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'opt_in' => array(
+        'description' => 'Track user opt-in to show their signature per message action.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => FALSE,
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'Submission timestamp',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('sid'),
+  );
+
+  // Opt in tracking table.
+  $schema['springboard_action_opt_in_block'] = array(
+    'description' => 'Store action optin.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'Action node id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'visibility' => array(
+        'description' => 'Track user opt-in to show their signature per message action.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => FALSE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('nid'),
+  );
+
+  return $schema;
 }
 
  /**

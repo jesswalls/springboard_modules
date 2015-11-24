@@ -253,7 +253,7 @@ function _sba_message_action_create_node_fields($update = false) {
     '_instance' => array(
       'bundle' => 'sba_message_action',
       'deleted' => 0,
-      'description' => 'Check this box to enable test mode. Messages will not be sent to any configured targets when test mode is enabled.',
+      'description' => 'Check this box to enable test mode. Messages will not be sent to any configured targets when test mode is enabled. Unpublished actions are always in test mode.',
       'display' => array(
         'default' => array(
           'label' => 'Above',
@@ -352,6 +352,142 @@ function _sba_message_action_create_node_fields($update = false) {
       ),
     ),
   );
+
+
+  $fields['field_sba_action_flow'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'field_sba_action_flow',
+    'foreign keys' => array(),
+    'indexes' => array(
+      'value' => array(
+        0 => 'value',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'list',
+    'settings' => array(
+      'allowed_values' => array(
+        'one' => 'One-step',
+        'multi' => 'Multi-step',
+      ),
+      'allowed_values_function' => '',
+    ),
+    'translatable' => 0,
+    'type' => 'list_text',
+    '_instance' => array(
+      'bundle' => 'sba_message_action',
+      'default_value' => array(
+        0 => array(
+          'value' => 'one',
+        ),
+      ),
+      'deleted' => 0,
+      'description' => '<strong>One-step action flow</strong> allows supporters to take action without entering their address as a separate step; however, if your action will have multiple messages (ie, thank/spank) they cannot be edited by supporters.
+<strong>Multi-step action flow</strong> allows supporters to edit multiple messages under the same action; supporters will be required to enter their address prior to viewing, editing, and sending the messages.',
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => 6,
+        ),
+        'teaser' => array(
+          'label' => 'hidden',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => 0,
+        ),
+      ),
+      'entity_type' => 'node',
+      'field_name' => 'field_sba_action_flow',
+      'label' => 'Take Action User Flow',
+      'required' => 1,
+      'settings' => array(
+        'user_register_form' => FALSE,
+      ),
+      'widget' => array(
+        'active' => 1,
+        'module' => 'options',
+        'settings' => array(),
+        'type' => 'options_buttons',
+        'weight' => 33,
+      ),
+    ),
+  );
+
+  $fields['field_sba_multistep_prompt'] = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(
+      0 => 'node',
+    ),
+    'field_name' => 'field_sba_multistep_prompt',
+    'foreign keys' => array(
+      'format' => array(
+        'columns' => array(
+          'format' => 'format',
+        ),
+        'table' => 'filter_format',
+      ),
+    ),
+    'indexes' => array(
+      'format' => array(
+        0 => 'format',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'text',
+    'settings' => array(),
+    'translatable' => 0,
+    'type' => 'text_long',
+    '_instance' => array(
+      'bundle' => 'sba_message_action',
+      'default_value' => array(
+        0 => array(
+          'value' => "We've crafted multiple messages for this action based on your legislator's position. Please enter your address in order to view and edit those messages."   ,
+          'format' => 'filtered_html',
+        ),
+      ),
+      'deleted' => 0,
+      'description' => 'This text will appear in the landing page message layout as a replacement for the "Your Message" form used in single step layouts.',
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => 6,
+        ),
+        'teaser' => array(
+          'label' => 'hidden',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => 0,
+        ),
+      ),
+      'entity_type' => 'node',
+      'field_name' => 'field_sba_multistep_prompt',
+      'label' => 'Multi-step prompt text',
+      'required' => 0,
+      'settings' => array(
+        'text_processing' => 1,
+        'user_register_form' => FALSE,
+      ),
+      'widget' => array(
+        'active' => 1,
+        'module' => 'text',
+        'settings' => array(
+          'rows' => 5,
+        ),
+        'type' => 'text_textarea',
+        'weight' => 5,
+      ),
+    ),
+  );
+
 
   foreach ($fields as $key => $values) {
     $instance = $values['_instance'];

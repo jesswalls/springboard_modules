@@ -157,7 +157,7 @@ function webform_goals_add($form, $form_state, $goal = array()) {
     $form['goal_wrapper']['starter_message']['#format'] = $goal['starter_message_format'];
   }
   else {
-    $form['goal_wrapper']['starter_message']['#attributes'] = array('placeholder' => t('Enter your personal starter message here.'));
+    $form['goal_wrapper']['starter_message']['#attributes'] = array('placeholder' => t('Enter your personal starter message here. It will be shown in place of the template if the minimum submissions required to show progress have not been reached.'));
   }
   $form['goal_wrapper']['starter_message']['token_tree'] = array(
     '#type' => 'fieldset',
