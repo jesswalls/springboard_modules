@@ -535,7 +535,7 @@ function fundraiser_sustainers_salesforce_genmap_map_fields_alter(&$fields, $con
     $info = _fundraiser_get_donation_gateway($donation->did);
     $offsite_recurring = _fundraiser_sustainers_offsite_recurring($info['offsite_recurring'], $donation->donation['payment_method']);
     $map = $context['map'];
-
+    $charge = $donation->status_charged == 1 ? "status_charged set" : "status_charged not set";
     // Add recurring item marker if recurring or not.
     $fields['Is_Recurring_Donation__c'] = FALSE;
     if ($donation->donation['recurs_monthly'] == TRUE) {
@@ -552,6 +552,8 @@ function fundraiser_sustainers_salesforce_genmap_map_fields_alter(&$fields, $con
       }
       if (isset($map->field_map['salesforce_donation_map']['stage'])) {
         $sf_field = $map->field_map['salesforce_donation_map']['stage'];
+        $stg = $fields[$sf_field];
+    	watchdog('fundraiser_sustainers', "donation @did in @stage: @charged", array('@did' => $donation->did, '@charged' => $charge, '@stage' => $stg)); 
         if ($fields[$sf_field] == 'Posted' && $donation->donation['recurs_monthly'] == TRUE && $donation->status_charged != 1) {
           $sf_field = $map->field_map['salesforce_donation_map']['stage'];
           $fields[$sf_field] = 'Pledged';
