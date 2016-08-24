@@ -40,6 +40,11 @@ function springboard_api_form_resource_retrieve($nid, $api_key = NULL, $op = NUL
  */
 function springboard_api_form_resource_index($node_type = NULL) {
   $form_types = variable_get('webform_node_types', array('webform'));
+  // Currently unable to handle social actions, exclude them from list if present.
+  $sb_action_types = variable_get('sba_action_types', array());
+  if (!empty($sb_action_types) && in_array('sba_social_action', $sb_action_types)) {
+    $excluded_types = array('sba_social_action');
+  }
   $form_select = db_select('node', 'n');
   $form_select->fields('n', array('nid', 'type', 'title'));
   if (module_exists('fundraiser')) {
@@ -50,6 +55,9 @@ function springboard_api_form_resource_index($node_type = NULL) {
     $form_select->condition('type', $node_type, '=');
   }
   else {
+    if (!empty($excluded_types)) {
+      $form_select->condition('type', $excluded_types, 'NOT IN');
+    }
     $form_select->condition('type', $form_types, 'in');
   }
   $results = $form_select->execute();
@@ -76,7 +84,7 @@ function springboard_api_form_action_submit($nid, $app_id = NULL, $submission = 
       if (springboard_advocacy_is_action_type($node->type)) {
         $action_submission = _springboard_api_convert_action_submission($submission, $node);
         if (is_array($action_submission) && !empty($action_submission)) {
-          $action_type = TRUE;	
+          $action_type = TRUE;
         }
       }
     }
@@ -101,7 +109,7 @@ function springboard_api_form_action_submit($nid, $app_id = NULL, $submission = 
       ),
       'values' => array(),
     );
-    if ($action_type === TRUE) {
+    if (isset($action_type) && $action_type === TRUE) {
       // Merge in any submitted advocacy fields.
       $form_state['values'] += $action_submission;
     }
@@ -146,7 +154,10 @@ function springboard_api_form_action_submit($nid, $app_id = NULL, $submission = 
         'submission_id' => $sid,
       );
       // Allow other modules to alter the response.
-      drupal_alter('springboard_api_response', $response);
+      $context = array(
+        'node' => $node,
+      );
+      drupal_alter('springboard_api_response', $response, $context);
       return array($response);
     }
   }

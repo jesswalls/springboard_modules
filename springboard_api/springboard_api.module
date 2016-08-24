@@ -352,7 +352,14 @@ function springboard_api_get_form_details($nid) {
     // Handle advocacy fields if enabled.
     if (module_exists('springboard_advocacy')) {
       if (springboard_advocacy_is_action_type($node->type)) {
-        springboard_api_get_action_form_details($node, $form_details);
+        // Can't currently handle this type.
+        if ($node->type == 'sba_social_action') {
+          return FALSE;
+        }
+        if (springboard_api_get_action_form_details($node, $form_details) === FALSE) {
+          // Multi-step or other unsupported type.
+          return FALSE;   
+        }
       }
     }
     // Build form field list.
@@ -434,11 +441,14 @@ function springboard_api_get_action_form_details($node, &$form_details) {
         if (isset($message['body_required'])) {
           $message['edited_body']['#required'] = $message['body_required']['#value'];
         }
-        if ($message['edited_body']['#required'] || $message['subject']['#required']) {
+        if ($message['edited_body']['#required'] || (isset($message['subject']['#required']) && $message['subject']['#required'])) {
           // If subject or body is required, mark their containers required.
           $form['sba_messages']['#required'] = TRUE;
           $form['sba_messages']['message']['#required'] = TRUE;
         }
+      } elseif (isset($form['sba_messages']['multiflow'])) {
+        // Can't currently handle multistep forms
+        return FALSE;
       }
       // Parse the form built by advocacy.
       foreach (element_children($form) as $key) {
@@ -662,18 +672,23 @@ function _springboard_api_is_secure() {
  * Implements hook_springboard_api_response_alter().
  * TODO: Move this somewhere else, 
  */
-function springboard_api_springboard_api_response_alter(&$response) {
+function springboard_api_springboard_api_response_alter(&$response, $context) {
   // If advocacy is enabled, check for transaction server response in session.
   if (module_exists('springboard_advocacy')) {
-    $delivered_html = theme('webform_confirmations_delivered', $_SESSION['delivered_messages']);
-    $undelivered_html = theme('webform_confirmations_undelivered', $_SESSION['undelivered_messages']);
-    // Add the transaction server results to the response to the client.
-    $data = array(
-      'confirmations_delivered' => $delivered_html,
-      'confirmations_undelivered' => $undelivered_html,
-      'raw_confirmations_delivered' => $_SESSION['delivered_messages'],
-      'raw_confirmations_undelivered' => $_SESSION['undelivered_messages'],
-    );
-    $response['data'] = $data;
+    $node = $context['node'];
+    if (springboard_advocacy_is_action_type($node->type)) {
+      if (isset($_SESSION['delivered_messages']) || isset($_SESSION['undelivered_messages'])) {
+        $delivered_html = theme('webform_confirmations_delivered', $_SESSION['delivered_messages']);
+        $undelivered_html = theme('webform_confirmations_undelivered', $_SESSION['undelivered_messages']);
+        // Add the transaction server results to the response to the client.
+        $data = array(
+          'confirmations_delivered' => $delivered_html,
+          'confirmations_undelivered' => $undelivered_html,
+          'raw_confirmations_delivered' => $_SESSION['delivered_messages'],
+          'raw_confirmations_undelivered' => $_SESSION['undelivered_messages'],
+        );
+        $response['data'] = $data;
+      }
+    }
   }
 }
