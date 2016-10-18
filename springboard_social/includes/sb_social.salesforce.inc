@@ -37,8 +37,8 @@ function sb_social_salesforce_mapping_map_fields_alter(&$fields, $context) {
           }
           break;
         case 'submission':
-          // Give Action__c SFID replacement token for a reference field, IF the Webform of the submission
-          // has a map to Action__c, or give the Webform submission ID otherwise.
+          // Give sb_Actions_Taken__c SFID replacement token for a reference field, IF the Webform of the submission
+          // has a map to sb_Actions_Taken__c, or give the Webform submission ID otherwise.
           $submission = $wrapper->submission->value();
           if ('reference' == $field_mapping['salesforce_field']['type']) {
             if ($submission && _sb_social_webform_maps_to_action($submission->nid)) {
