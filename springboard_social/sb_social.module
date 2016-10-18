@@ -51,9 +51,9 @@ function sb_social_entity_property_info() {
           'setter callback' => 'sb_social_share_entity_set_properties',
         ),
         'submission' => array(
-          'label' => t('Webform submission or Actions__c'),
+          'label' => t('Webform submission or sb_Actions_Taken__c'),
           'type' => 'integer',
-          'description' => t("The Webform submission. May sync to submission ID or Actions__c SFID."),
+          'description' => t("The Webform submission. May sync to submission ID or sb_Actions_Taken__c."),
           'getter callback' => 'sb_social_share_entity_get_properties',
           'setter callback' => 'sb_social_share_entity_set_properties',
         ),
